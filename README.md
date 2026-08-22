@@ -4,7 +4,8 @@ An Apple Music–style web player for Furina song covers. Light "Fontaine" theme
 default, with a full dark mode, a full-screen Now Playing view, time-synced
 lyrics, search, a reorderable queue, and playlists.
 
-Built with Vite + React + TypeScript. No runtime dependencies beyond React.
+Built with Vite + React + TypeScript, using [AMLL](https://github.com/amll-dev/applemusic-like-lyrics)
+for the lyric player and the fluid artwork background.
 
 ```bash
 npm install
@@ -66,16 +67,45 @@ full-screen backdrop always has something to work with.
 
 ### Lyrics
 
-Either inline, with `t` in seconds:
+Lyrics are rendered by [AMLL](https://github.com/amll-dev/applemusic-like-lyrics)
+(`LyricPlayer`), and parsed by `@applemusic-like-lyrics/lyric`, so every format
+that library supports works. Point a track at a file:
+
+```jsonc
+"ttmlUrl": "https://…/chiling.ttml"   // word-level, best quality
+"lrcUrl":  "https://…/chiling.lrc"    // line-level
+"lyricsFormat": "yrc"                  // optional; overrides the guess from the extension
+```
+
+The format is inferred from the extension (`.ttml`/`.xml`, `.lrc`, `.yrc`,
+`.qrc`, `.lys`) unless `lyricsFormat` says otherwise.
+
+**For word-by-word karaoke highlighting you want TTML.** LRC can only express
+one timestamp per line, so an LRC file highlights whole lines at a time.
+
+> **TTML gotcha:** AMLL's parser silently drops any `<p>` element without an
+> `itunes:key` attribute — a structurally valid TTML file with no keys parses to
+> *zero* lines and shows the empty state. Declare
+> `xmlns:itunes="http://music.apple.com/lyric-ttml-internal"` and give every line
+> a key:
+>
+> ```xml
+> <p itunes:key="L1" begin="0.000" end="3.000" ttm:agent="v1">
+>   <span begin="0.000" end="0.750">Alpha </span><span begin="0.750" end="1.500">bravo</span>
+> </p>
+> ```
+>
+> `scripts/make-dev-audio.mjs` generates a small valid example at
+> `public/dev/fixture.ttml` you can copy the shape from.
+
+The simple inline form still works and is converted to AMLL's model for you,
+but it cannot express word timing:
 
 ```json
 "lyrics": [{ "t": 12.4, "text": "台下人走过" }]
 ```
 
-…or point `lrcUrl` at a standard `.lrc` file, which is fetched on demand. The
-parser handles `[mm:ss]`, `[mm:ss.xx]`, `[mm:ss.xxx]`, the legacy `[mm:ss:xx]`
-form, repeated timestamps on one line, and out-of-order lines. Tracks without
-lyrics simply show an empty state.
+Tracks with no lyrics show a quiet empty state.
 
 ## Keyboard shortcuts
 
@@ -101,7 +131,10 @@ npm run build        # typecheck + production bundle
 
 `npm run test:e2e` needs `npm run fixture` first and a dev server running. It
 loads `?manifest=dev`, a local fixture manifest, so the browser tests never
-depend on network access or on remote media staying up.
+depend on network access or on remote media staying up. It launches Chromium
+with SwiftShader because AMLL's background renderer needs WebGL and CI machines
+have no GPU; if WebGL is genuinely unavailable the app falls back to a CSS blur
+backdrop, and the suite asserts that path instead.
 
 ## Deploying
 
@@ -114,10 +147,39 @@ any other host, build with `BASE_PATH=/ npm run build`.
 
 - A single long-lived `<audio>` element ([`src/audio/AudioEngine.ts`](src/audio/AudioEngine.ts))
   — replacing the element mid-session would lose the autoplay grant.
-- Playback position is *not* React state. It changes several times a second, so
-  it is exposed through `useSyncExternalStore` and consumed only by the scrubber
-  and the lyrics pane, keeping the rest of the tree from re-rendering.
+- Playback position is *not* React state, and there are two stores for it:
+  `timeupdate` (~4Hz) drives the scrubber, while a `requestAnimationFrame` loop
+  supplies integer milliseconds to AMLL, which needs that resolution for
+  word-level animation. Both go through `useSyncExternalStore`, so a 60Hz value
+  never re-renders the rest of the tree. The rAF loop only runs while playing.
 - Queue, shuffle and repeat live in a pure reducer
   ([`src/state/playerReducer.ts`](src/state/playerReducer.ts)) with no DOM access,
   so the awkward cases (boundaries under each repeat mode, shuffle round-trips,
   reordering across the play cursor) are unit-tested directly.
+
+## Licence and credits
+
+This project is licensed under the **GNU AGPL-3.0-only** — see [LICENSE](LICENSE).
+
+That is not a free choice: the player links
+[Apple Music-like Lyrics](https://github.com/amll-dev/applemusic-like-lyrics)
+by Steve-xmh and the AMLL contributors, which is AGPL-3.0-only, so the combined
+work must be too. Practical consequences:
+
+- The full source must stay available to anyone who uses the deployed site.
+  That is what the "Source code (AGPL-3.0)" link in the sidebar is for — AGPL
+  section 13 requires it for software conveyed over a network.
+- Anyone who modifies and deploys this must publish their modified source under
+  the same licence.
+
+Third-party components:
+
+| | |
+|---|---|
+| [`@applemusic-like-lyrics/*`](https://github.com/amll-dev/applemusic-like-lyrics) | AGPL-3.0-only — lyric player, background renderer, lyric parsers |
+| [PixiJS v7](https://pixijs.com/) | MIT — WebGL renderer behind the fluid background |
+| [React](https://react.dev/) | MIT |
+
+Audio and artwork are **not** part of this repository; they are referenced by
+URL from `public/tracks.json` and remain the property of their respective
+owners.

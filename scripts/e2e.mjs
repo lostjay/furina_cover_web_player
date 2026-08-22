@@ -9,7 +9,15 @@ const ok = (label, cond, extra = '') => {
 
 const browser = await chromium.launch({
   executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-  args: ['--autoplay-policy=no-user-gesture-required', '--mute-audio'],
+  args: [
+    '--autoplay-policy=no-user-gesture-required',
+    '--mute-audio',
+    // AMLL's BackgroundRender needs WebGL; headless has no GPU, so render
+    // through SwiftShader rather than silently losing the background.
+    '--use-gl=angle',
+    '--use-angle=swiftshader',
+    '--enable-unsafe-swiftshader',
+  ],
 })
 const page = await browser.newPage({ viewport: { width: 1280, height: 860 } })
 const errors = []
@@ -44,14 +52,70 @@ await page.waitForTimeout(500)
 const afterSeek = await page.evaluate(() => document.querySelector('audio[data-audio-engine="main"]').currentTime)
 ok('seek works', afterSeek > 5.5, `t=${afterSeek.toFixed(2)}`)
 
-// Full screen + lyrics
+// --- full screen: AMLL lyric player + background ----------------------
 await page.keyboard.press('f')
-await page.waitForTimeout(600)
+await page.waitForTimeout(1200)
 ok('full screen opens', await page.locator('.fullscreen').isVisible())
-const lyricCount = await page.locator('.lyric-line').count()
-ok('lyrics render', lyricCount === 4, `lines=${lyricCount}`)
-const active = await page.locator('.lyric-line.is-active').innerText()
-ok('lyric line syncs to ~6s', active.includes('无关我'), `active="${active}"`)
+
+// AMLL renders its own DOM inside our container rather than our old .lyric-line
+// markup, so assert on the text it produced from the word-level TTML fixture.
+// The lyrics are fetched and parsed asynchronously once the pane mounts, so
+// wait for content rather than racing a fixed timeout.
+await page
+  .waitForFunction(() => (document.querySelector('.fs-lyrics')?.textContent ?? '').includes('Alpha'), null, { timeout: 8000 })
+  .catch(() => {})
+const lyricText = await page.locator('.fs-lyrics').innerText()
+ok('AMLL parsed the TTML fixture', lyricText.includes('Alpha') && lyricText.includes('papa'),
+   JSON.stringify(lyricText.replace(/\s+/g, ' ').slice(0, 90)))
+
+// The background: either a live WebGL canvas, or the documented CSS fallback.
+const bg = await page.evaluate(() => {
+  const canvas = document.querySelector('.fs-bg-render canvas')
+  if (canvas) {
+    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
+    return { mode: 'webgl', ok: !!gl, w: canvas.width, h: canvas.height }
+  }
+  return { mode: 'fallback', ok: !!document.querySelector('.fs-backdrop img') }
+})
+ok(`background renders (${bg.mode})`, bg.ok, JSON.stringify(bg))
+
+// The actual point of adopting AMLL: the highlight must move WITHIN a line,
+// not just between lines. Sample the first line's word spans at two times
+// inside it and require the rendered mask/opacity to differ.
+const wordProgress = await page.evaluate(async () => {
+  const el = document.querySelector('audio[data-audio-engine="main"]')
+  const sample = async (t) => {
+    el.currentTime = t
+    await new Promise((r) => setTimeout(r, 700))
+    const spans = [...document.querySelectorAll('.fs-lyrics span')]
+      .filter((s) => s.children.length === 0 && s.textContent.trim())
+    return spans.slice(0, 6).map((s) => {
+      const cs = getComputedStyle(s)
+      return `${cs.opacity}|${cs.maskImage ?? ''}|${cs.filter}|${cs.color}`
+    }).join('~')
+  }
+  const early = await sample(0.2)   // during "Alpha"
+  const late = await sample(2.6)    // during "delta", same line
+  return { early, late, differs: early !== late, sampled: early.split('~').length }
+})
+ok('word-level highlight advances within one line', wordProgress.differs,
+   `spans=${wordProgress.sampled}`)
+
+// Click-to-seek must survive the component swap.
+await page.evaluate(() => { document.querySelector('audio[data-audio-engine="main"]').currentTime = 0 })
+await page.waitForTimeout(400)
+const lineToClick = page.locator('.fs-lyrics div').filter({ hasText: 'India' }).last()
+if (await lineToClick.count()) {
+  await lineToClick.click({ force: true })
+  await page.waitForTimeout(600)
+  const t = await page.evaluate(() => document.querySelector('audio[data-audio-engine="main"]').currentTime)
+  ok('clicking a lyric line seeks', t > 5.5 && t < 7.5, `t=${t.toFixed(2)}`)
+} else {
+  ok('clicking a lyric line seeks', false, 'could not locate the line element')
+}
+
+await page.evaluate(() => { document.querySelector('audio[data-audio-engine="main"]').currentTime = 4 })
+await page.waitForTimeout(800)
 await page.screenshot({ path: '/tmp/shots/03-fullscreen-light.png' })
 
 // Dark theme in full screen

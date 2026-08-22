@@ -31,7 +31,10 @@ export class AudioEngine {
   private readonly preloadEl: HTMLAudioElement
   private timeListeners = new Set<EngineListener>()
   private stateListeners = new Set<EngineListener>()
+  private rafListeners = new Set<EngineListener>()
   private snapshot: TimeSnapshot = EMPTY
+  private rafTimeMs = 0
+  private rafHandle: number | null = null
   private preloadedUrl: string | null = null
 
   constructor() {
@@ -74,6 +77,15 @@ export class AudioEngine {
     for (const ev of ['play', 'pause', 'waiting', 'playing', 'ended', 'error'] as const) {
       this.el.addEventListener(ev, emitState)
     }
+
+    // The rAF loop only needs to spin while audio is actually moving.
+    this.el.addEventListener('play', this.startRafLoop)
+    this.el.addEventListener('playing', this.startRafLoop)
+    this.el.addEventListener('pause', this.stopRafLoop)
+    this.el.addEventListener('ended', this.stopRafLoop)
+    // A seek while paused still has to move the lyric highlight.
+    this.el.addEventListener('seeked', this.emitRafTime)
+    this.el.addEventListener('loadedmetadata', this.emitRafTime)
   }
 
   subscribeTime = (fn: EngineListener): (() => void) => {
@@ -82,6 +94,54 @@ export class AudioEngine {
   }
 
   getTimeSnapshot = (): TimeSnapshot => this.snapshot
+
+  // --- high-resolution position ------------------------------------------
+  //
+  // `timeupdate` fires around 4x/second, which is fine for a scrubber but far
+  // too coarse for word-level lyric animation — the highlight would visibly
+  // step. AMLL's LyricPlayer wants integer milliseconds as often as possible,
+  // so this second store is driven by requestAnimationFrame.
+  //
+  // Kept separate from `subscribeTime` on purpose: re-rendering the scrubber at
+  // 60Hz would be pure waste.
+
+  subscribeRaf = (fn: EngineListener): (() => void) => {
+    this.rafListeners.add(fn)
+    // A subscriber arriving mid-playback should not wait for the next event.
+    if (!this.el.paused) this.startRafLoop()
+    return () => {
+      this.rafListeners.delete(fn)
+      if (this.rafListeners.size === 0) this.stopRafLoop()
+    }
+  }
+
+  getRafTimeMs = (): number => this.rafTimeMs
+
+  private emitRafTime = (): void => {
+    const t = this.el.currentTime
+    // Must be an integer: AMLL documents currentTime as integer milliseconds.
+    const ms = Number.isFinite(t) ? Math.round(t * 1000) : 0
+    if (ms === this.rafTimeMs) return
+    this.rafTimeMs = ms
+    for (const fn of this.rafListeners) fn()
+  }
+
+  private startRafLoop = (): void => {
+    if (this.rafHandle !== null || typeof requestAnimationFrame === 'undefined') return
+    const tick = () => {
+      this.emitRafTime()
+      this.rafHandle = requestAnimationFrame(tick)
+    }
+    this.rafHandle = requestAnimationFrame(tick)
+  }
+
+  private stopRafLoop = (): void => {
+    if (this.rafHandle === null) return
+    cancelAnimationFrame(this.rafHandle)
+    this.rafHandle = null
+    // Settle on the final position so a paused player still reads correctly.
+    this.emitRafTime()
+  }
 
   subscribeState = (fn: EngineListener): (() => void) => {
     this.stateListeners.add(fn)
@@ -149,6 +209,7 @@ export class AudioEngine {
 
   detach(): void {
     this.el.pause()
+    this.stopRafLoop()
     this.el.remove()
     this.preloadEl.remove()
   }

@@ -54,7 +54,10 @@ export function generateCoverDataUri(seed: string, label: string): string {
   const cy = 20 + ((h >>> 7) % 60)
   const glyph = escapeXml([...label][0] ?? '♪')
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  // The explicit width/height matter: an SVG with only a viewBox has no
+  // intrinsic size, and decodes to 0x0 when uploaded as a WebGL texture — which
+  // is exactly what AMLL's BackgroundRender does with it.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
 <defs>
 <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
 <stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/>

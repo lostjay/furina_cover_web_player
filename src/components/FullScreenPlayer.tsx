@@ -1,6 +1,7 @@
 import { usePlayer, useTime } from '../state/PlayerProvider'
 import { Scrubber, formatTime } from './Scrubber'
 import { LyricsPane } from './LyricsPane'
+import { Backdrop } from './Backdrop'
 import {
   PlayIcon, PauseIcon, NextIcon, PrevIcon, ShuffleIcon, RepeatIcon, ChevronDownIcon,
 } from './icons'
@@ -12,17 +13,12 @@ export function FullScreenPlayer({ onClose }: { onClose: () => void }) {
   if (!track) return null
   const art = artworkFor(track)
   const total = duration > 0 ? duration : (track.durationSec ?? 0)
+  // AMLL's background renderer gets livelier when the track has lyrics.
+  const hasLyrics = Boolean(track.lyrics?.length || track.ttmlUrl || track.lrcUrl)
 
   return (
     <div className="fullscreen" role="dialog" aria-modal="true" aria-label="Now playing">
-      {/*
-        The blurred backdrop is a plain <img>, not a canvas sample: the media
-        origin's Access-Control-Allow-Origin is malformed, so getImageData would
-        taint and throw. CSS blur needs no pixel access and works regardless.
-      */}
-      <div className="fs-backdrop" aria-hidden="true">
-        <img src={art} alt="" />
-      </div>
+      <Backdrop artwork={art} playing={state.isPlaying} hasLyrics={hasLyrics} />
 
       <div className="fs-head">
         <button className="icon-btn" onClick={onClose} aria-label="Close full screen player">

@@ -12,6 +12,11 @@ export interface LyricLine {
   text: string
 }
 
+/** Lyric file formats understood by `@applemusic-like-lyrics/lyric`. */
+export type LyricsFormat = 'ttml' | 'lrc' | 'yrc' | 'qrc' | 'lys'
+
+const LYRICS_FORMATS: readonly string[] = ['ttml', 'lrc', 'yrc', 'qrc', 'lys']
+
 export interface Track {
   id: string
   title: string
@@ -22,8 +27,13 @@ export interface Track {
   /** Undefined until `loadedmetadata` supplies the real value. */
   durationSec?: number
   artworkUrl?: string
+  /** Simple line-level lyrics. Cannot express word timing — prefer `ttmlUrl`. */
   lyrics?: LyricLine[]
+  /** Word-level Apple Music-style lyrics. Takes precedence over `lrcUrl`. */
+  ttmlUrl?: string
   lrcUrl?: string
+  /** Overrides the format guessed from the URL's extension. */
+  lyricsFormat?: LyricsFormat
 }
 
 export interface Album {
@@ -138,8 +148,15 @@ export function parseLibrary(raw: unknown): Library {
       if (art) track.artworkUrl = art
       const lyrics = parseLyrics(rawTrack.lyrics)
       if (lyrics) track.lyrics = lyrics
+      const ttmlUrl = str(rawTrack.ttmlUrl)
+      if (ttmlUrl) track.ttmlUrl = ttmlUrl
       const lrcUrl = str(rawTrack.lrcUrl)
       if (lrcUrl) track.lrcUrl = lrcUrl
+      const fmt = str(rawTrack.lyricsFormat)?.toLowerCase()
+      if (fmt !== undefined) {
+        if (LYRICS_FORMATS.includes(fmt)) track.lyricsFormat = fmt as LyricsFormat
+        else warn(`${albumId} track "${id}" has unknown lyricsFormat "${fmt}"; ignored`)
+      }
 
       tracks.set(id, track)
       trackIds.push(id)

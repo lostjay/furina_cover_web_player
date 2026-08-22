@@ -257,3 +257,14 @@ export function useTime(): TimeSnapshot {
   const { engine } = usePlayer()
   return useSyncExternalStore(engine.subscribeTime, engine.getTimeSnapshot, engine.getTimeSnapshot)
 }
+
+/**
+ * Playback position in integer milliseconds, updated every animation frame.
+ *
+ * Only the AMLL lyric player should use this — it drives word-level animation
+ * and needs the resolution. Everything else wants `useTime()`.
+ */
+export function useTimeMs(): number {
+  const { engine } = usePlayer()
+  return useSyncExternalStore(engine.subscribeRaf, engine.getRafTimeMs, engine.getRafTimeMs)
+}

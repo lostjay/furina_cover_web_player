@@ -69,6 +69,19 @@ export function Sidebar({ view, onNavigate, onNewPlaylist }: Props) {
       <button className="sidebar-action" onClick={onNewPlaylist}>
         <PlusIcon size={14} /> New Playlist
       </button>
+
+      {/*
+        AGPL-3.0 section 13: this player is conveyed over a network, so users
+        interacting with it must be offered a way to get the source.
+      */}
+      <a
+        className="sidebar-source"
+        href="https://github.com/lostjay/furina_cover_web_player"
+        target="_blank"
+        rel="noreferrer noopener"
+      >
+        Source code (AGPL-3.0)
+      </a>
     </nav>
   )
 }
