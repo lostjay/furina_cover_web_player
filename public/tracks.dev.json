@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "_comment": "Offline fixture used by automated tests (?manifest=dev). Not used in production.",
+  "albums": [
+    {
+      "id": "dev-album",
+      "title": "Dev Fixtures",
+      "artist": "Test Tone",
+      "year": 2025,
+      "tracks": [
+        {
+          "id": "dev-a",
+          "title": "赤伶 (fixture)",
+          "durationSec": 12,
+          "audioUrl": "./dev/tone-a.mp3",
+          "lyrics": [
+            { "t": 0, "text": "戏一折 水袖起落" },
+            { "t": 3, "text": "唱悲欢唱离合" },
+            { "t": 6, "text": "无关我" },
+            { "t": 9, "text": "扇开合 锣鼓响又默" }
+          ]
+        },
+        { "id": "dev-b", "title": "Second Fixture", "durationSec": 8, "audioUrl": "./dev/tone-b.mp3" },
+        { "id": "dev-c", "title": "Third Fixture", "durationSec": 15, "audioUrl": "./dev/tone-c.mp3" }
+      ]
+    }
+  ]
+}

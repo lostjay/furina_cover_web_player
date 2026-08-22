@@ -1,0 +1,118 @@
+/*
+ * Light "Fontaine" first, per the brief: white / frosted glass with soft
+ * blue-lilac accents. Dark mode is a full peer, not an afterthought.
+ *
+ * Every colour is defined on bare :root so nothing depends on a media query
+ * having matched. Dark values are then re-declared twice: once for the system
+ * preference (guarded so an explicit light choice wins) and once for the
+ * explicit [data-theme="dark"] attribute, so the manual toggle overrides the OS
+ * in both directions.
+ */
+
+:root {
+  /* Fontaine blue → periwinkle */
+  --accent: #1f7fd4;
+  --accent-hover: #1a6db8;
+  --accent-soft: #e4f0fb;
+  --accent-contrast: #ffffff;
+  --lilac: #7b74cf;
+
+  --bg: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #f6f8fb;
+  --sidebar-bg: rgba(244, 247, 251, 0.72);
+  --chrome-bg: rgba(255, 255, 255, 0.78);
+
+  --text: #111823;
+  --text-secondary: #5f6b7f;
+  --text-tertiary: #8b95a6;
+
+  --border: rgba(17, 24, 35, 0.10);
+  --border-strong: rgba(17, 24, 35, 0.18);
+  --hover: rgba(17, 24, 35, 0.045);
+  --active: rgba(17, 24, 35, 0.08);
+
+  --track-rail: rgba(17, 24, 35, 0.16);
+  --shadow-sm: 0 1px 2px rgba(17, 24, 35, 0.06), 0 1px 1px rgba(17, 24, 35, 0.04);
+  --shadow-md: 0 4px 16px rgba(17, 24, 35, 0.10);
+  --shadow-lg: 0 24px 60px rgba(17, 24, 35, 0.22);
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  --sidebar-w: 248px;
+  --bar-h: 74px;
+
+  /*
+   * CJK fallbacks are essential — the library is largely Chinese (赤伶) and the
+   * Apple system faces carry no Han glyphs off macOS.
+   */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC",
+    "Source Han Sans SC", sans-serif;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent: #4da3ea;
+    --accent-hover: #6bb4ef;
+    --accent-soft: rgba(77, 163, 234, 0.16);
+    --accent-contrast: #06101c;
+    --lilac: #9d96e6;
+
+    --bg: #0b0e13;
+    --bg-elevated: #161b23;
+    --bg-sunken: #10141b;
+    --sidebar-bg: rgba(18, 22, 30, 0.72);
+    --chrome-bg: rgba(14, 18, 25, 0.80);
+
+    --text: #f2f5f9;
+    --text-secondary: #a3aec0;
+    --text-tertiary: #76808f;
+
+    --border: rgba(255, 255, 255, 0.10);
+    --border-strong: rgba(255, 255, 255, 0.20);
+    --hover: rgba(255, 255, 255, 0.06);
+    --active: rgba(255, 255, 255, 0.11);
+
+    --track-rail: rgba(255, 255, 255, 0.20);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.7);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --accent: #4da3ea;
+  --accent-hover: #6bb4ef;
+  --accent-soft: rgba(77, 163, 234, 0.16);
+  --accent-contrast: #06101c;
+  --lilac: #9d96e6;
+
+  --bg: #0b0e13;
+  --bg-elevated: #161b23;
+  --bg-sunken: #10141b;
+  --sidebar-bg: rgba(18, 22, 30, 0.72);
+  --chrome-bg: rgba(14, 18, 25, 0.80);
+
+  --text: #f2f5f9;
+  --text-secondary: #a3aec0;
+  --text-tertiary: #76808f;
+
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.20);
+  --hover: rgba(255, 255, 255, 0.06);
+  --active: rgba(255, 255, 255, 0.11);
+
+  --track-rail: rgba(255, 255, 255, 0.20);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.7);
+
+  color-scheme: dark;
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "albums": [
+    {
+      "id": "furina-covers",
+      "title": "Furina Covers",
+      "artist": "Furina (RVC)",
+      "year": 2025,
+      "tracks": [
+        {
+          "id": "chiling",
+          "title": "赤伶",
+          "durationSec": 88,
+          "audioUrl": "https://lostjay.xyz/public/music/cover/%E8%B5%A4%E4%BC%B6.mp3"
+        }
+      ]
+    }
+  ]
+}
