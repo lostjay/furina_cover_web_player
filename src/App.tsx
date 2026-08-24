@@ -16,7 +16,7 @@ export type View =
 type Theme = 'light' | 'dark' | 'system'
 
 export function App() {
-  const { state, dispatch, engine, track, addPlaylist } = usePlayer()
+  const { state, dispatch, engine, track, addPlaylist, library } = usePlayer()
 
   const [view, setView] = useState<View>({ kind: 'library' })
   const [query, setQuery] = useState('')
@@ -27,6 +27,18 @@ export function App() {
   const [theme, setTheme] = useState<Theme>(() => readJson<Theme>('theme', 'system'))
 
   const searchRef = useRef<HTMLInputElement>(null)
+  // Tracks whether the user has chosen a view themselves, so the single-album
+  // redirect below never yanks them off a page they navigated to.
+  const navigatedRef = useRef(false)
+
+  // With exactly one album, "Songs" is a bare list of the same tracks. Open on
+  // the album itself so the app lands on artwork rather than a single row.
+  // A second album restores the normal library home automatically.
+  useEffect(() => {
+    if (navigatedRef.current || !library) return
+    const only = library.albums.length === 1 ? library.albums[0] : undefined
+    if (only) setView({ kind: 'album', albumId: only.id })
+  }, [library])
 
   // `system` removes the attribute so the prefers-color-scheme rules apply.
   useEffect(() => {
@@ -102,6 +114,7 @@ export function App() {
       <Sidebar
         view={view}
         onNavigate={(v) => {
+          navigatedRef.current = true
           setView(v)
           setQuery('')
         }}

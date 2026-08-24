@@ -30,6 +30,12 @@ await page.waitForSelector('.track-row')
 
 const rows = await page.locator('.track-row').count()
 ok('library renders fixture tracks', rows === 3, `rows=${rows}`)
+
+// A single-album manifest opens on the album hero, and the Albums nav section
+// is suppressed because it would just duplicate "Songs".
+ok('opens on the album hero', await page.locator('.album-hero').count() === 1)
+ok('Albums nav hidden for a single album',
+   (await page.locator('.nav-heading', { hasText: 'Albums' }).count()) === 0)
 ok('CJK title renders', (await page.locator('.track-title').first().innerText()).includes('赤伶'))
 
 // Click the first track and confirm real playback.

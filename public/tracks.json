@@ -2,16 +2,18 @@
   "version": 1,
   "albums": [
     {
-      "id": "furina-covers",
-      "title": "Furina Covers",
-      "artist": "Furina (RVC)",
+      "id": "curtain",
+      "title": "戏幕起落",
+      "artist": "芙宁娜 (AI cover)",
       "year": 2025,
+      "artworkUrl": "https://lostjay.xyz/public/music/cover/cover.jpeg",
       "tracks": [
         {
           "id": "chiling",
           "title": "赤伶",
           "durationSec": 88,
-          "audioUrl": "https://lostjay.xyz/public/music/cover/%E8%B5%A4%E4%BC%B6.mp3"
+          "audioUrl": "https://lostjay.xyz/public/music/cover/%E8%B5%A4%E4%BC%B6.mp3",
+          "lrcUrl": "https://lostjay.xyz/public/music/cover/%E8%B5%A4%E4%BC%B6.lrc"
         }
       ]
     }

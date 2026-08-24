@@ -50,14 +50,45 @@ It has to be something an `<audio>` element can play — an `.mp3`, `.m4a`, `.og
 served with an audio `Content-Type`. **YouTube and bilibili links will not work**;
 those are web pages, not audio files.
 
-Cross-origin URLs are fine and need no CORS headers — plain media playback
-performs no CORS check. The player deliberately never sets `crossOrigin` on the
-audio element, because doing so *would* opt into a check that many media hosts
-fail. Redirects (e.g. an origin that 302s to presigned R2/S3 storage) are
-followed transparently. For scrubbing to work, the host must honour `Range`
-requests — most object storage does.
+Cross-origin audio URLs need no CORS headers — plain media playback performs no
+CORS check, and the player deliberately never sets `crossOrigin` on the audio
+element because that *would* opt into a check many media hosts fail. Redirects
+(e.g. an origin that 302s to presigned R2/S3 storage) are followed
+transparently. For scrubbing, the host must honour `Range` requests — most
+object storage does.
+
+### CORS *is* required for lyrics and the fluid background
+
+Three things are not like audio, because they are read rather than merely
+played, and every one of them is CORS-checked:
+
+| What | How it is loaded |
+|---|---|
+| Lyric files (`lrcUrl` / `ttmlUrl`) | `fetch()` |
+| Background artwork | AMLL does `fetch(url).blob()` **and** sets `img.crossOrigin = "anonymous"` |
+
+So a media host must send a **valid** `Access-Control-Allow-Origin`. Valid means
+`*`, `null`, or one exact origin — **a wildcard in the subdomain position such as
+`https://*.example.com` is not legal and matches nothing.** For nginx:
+
+```nginx
+add_header Access-Control-Allow-Origin "*" always;
+```
+
+Cover art shown in the track list and album header is a plain `<img>` and works
+without any of this; only the animated background needs read access. When the
+artwork cannot be read, the player logs a warning and falls back to a generated
+gradient for the background rather than rendering nothing.
 
 ### Artwork
+
+Set `artworkUrl` once on the album and every track inherits it; a track may
+override it individually.
+
+For best results the file should be **square** (it is cropped to a square with
+`object-fit: cover`), a **real JPEG or WebP**, and **under a few hundred KB** —
+it is fetched again for the full-screen background, so a multi-megabyte PNG is
+felt twice.
 
 `artworkUrl` is optional. When it is missing — or the image fails to load — the
 player renders an original generated SVG cover: a Fontaine-flavoured gradient

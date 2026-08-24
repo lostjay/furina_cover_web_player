@@ -28,7 +28,8 @@ export function Sidebar({ view, onNavigate, onNewPlaylist }: Props) {
         <span className="label">Songs</span>
       </button>
 
-      {library && library.albums.length > 0 && (
+      {/* One album duplicates "Songs", and it is the home view anyway. */}
+      {library && library.albums.length > 1 && (
         <>
           <div className="nav-heading">Albums</div>
           {library.albums.map((album) => (
