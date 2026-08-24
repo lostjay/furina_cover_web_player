@@ -15,6 +15,12 @@ export type View =
 
 type Theme = 'light' | 'dark' | 'system'
 
+/** Above this width the full-screen player fits artwork and lyrics together. */
+const WIDE_VIEWPORT = '(min-width: 901px)'
+
+const isWideViewport = () =>
+  typeof window === 'undefined' || window.matchMedia(WIDE_VIEWPORT).matches
+
 export function App() {
   const { state, dispatch, engine, track, addPlaylist, library } = usePlayer()
 
@@ -26,7 +32,28 @@ export function App() {
   const [playlistName, setPlaylistName] = useState('')
   const [theme, setTheme] = useState<Theme>(() => readJson<Theme>('theme', 'system'))
 
+  // Wide screens show artwork and lyrics side by side; a phone has room for one
+  // at a time, so it opens on artwork and the user taps through to lyrics.
+  const [lyricsVisible, setLyricsVisible] = useState(() => isWideViewport())
+
   const searchRef = useRef<HTMLInputElement>(null)
+  // Once the user picks for themselves, viewport changes stop overriding them.
+  const lyricsChosenRef = useRef(false)
+
+  // Follow the viewport across rotation and resize, until the user decides.
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE_VIEWPORT)
+    const onChange = (e: MediaQueryListEvent) => {
+      if (!lyricsChosenRef.current) setLyricsVisible(e.matches)
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  const toggleLyrics = useCallback(() => {
+    lyricsChosenRef.current = true
+    setLyricsVisible((v) => !v)
+  }, [])
   // Tracks whether the user has chosen a view themselves, so the single-album
   // redirect below never yanks them off a page they navigated to.
   const navigatedRef = useRef(false)
@@ -96,7 +123,12 @@ export function App() {
         case 'n': case 'N': dispatch({ type: 'next' }); break
         case 'p': case 'P': dispatch({ type: 'prev' }); break
         case 'f': case 'F': if (track) setFullscreen((v) => !v); break
-        case 'l': case 'L': if (track) setFullscreen(true); break
+        case 'l': case 'L':
+          if (!track) break
+          // Open the player if closed; otherwise switch the lyrics on or off.
+          if (fullscreen) toggleLyrics()
+          else setFullscreen(true)
+          break
         case '/':
           e.preventDefault()
           searchRef.current?.focus()
@@ -105,7 +137,7 @@ export function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [dispatch, engine, state.volume, track, fullscreen, queueOpen, dialogOpen])
+  }, [dispatch, engine, state.volume, track, fullscreen, queueOpen, dialogOpen, toggleLyrics])
 
   const themeLabel = theme === 'system' ? 'Theme: system' : `Theme: ${theme}`
 
@@ -161,7 +193,13 @@ export function App() {
       />
 
       {queueOpen && <QueuePanel onClose={() => setQueueOpen(false)} />}
-      {fullscreen && <FullScreenPlayer onClose={() => setFullscreen(false)} />}
+      {fullscreen && (
+        <FullScreenPlayer
+          onClose={() => setFullscreen(false)}
+          lyricsVisible={lyricsVisible}
+          onToggleLyrics={toggleLyrics}
+        />
+      )}
 
       {dialogOpen && (
         <>

@@ -167,6 +167,90 @@ await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'd
 await page.waitForTimeout(350)
 await page.screenshot({ path: '/tmp/shots/02-library-dark.png' })
 
+
+// ---------------------------------------------------------------------
+// Mobile pass. This suite only ever ran at 1280x860, which is exactly why
+// `.fs-lyrics { display: none }` below 900px went unnoticed — the lyrics were
+// invisible on every phone. Guard the narrow layout permanently.
+// ---------------------------------------------------------------------
+const phone = await browser.newPage({
+  viewport: { width: 390, height: 844 },
+  deviceScaleFactor: 2,
+  isMobile: true,
+  hasTouch: true,
+})
+const phoneErrors = []
+phone.on('pageerror', (e) => phoneErrors.push(String(e)))
+phone.on('console', (m) => { if (m.type() === 'error') phoneErrors.push(m.text()) })
+
+await phone.goto(BASE + '?manifest=dev', { waitUntil: 'networkidle' })
+await phone.waitForSelector('.track-row')
+await phone.locator('.track-row').first().click()
+await phone.waitForTimeout(1200)
+
+// Full screen must be reachable by tap — there is no F key on a phone.
+await phone.locator('.bar-track button').last().click()
+await phone.waitForTimeout(1200)
+ok('[mobile] full screen opens by tap', await phone.locator('.fullscreen').count() === 1)
+
+const toggle = phone.locator('.fs-head button[aria-pressed]')
+ok('[mobile] lyrics toggle is present', await toggle.count() === 1)
+ok('[mobile] starts on artwork, lyrics off',
+   (await toggle.getAttribute('aria-pressed')) === 'false')
+
+await toggle.click()
+await phone.waitForTimeout(2000)
+
+const m = await phone.evaluate(() => {
+  const box = (sel) => {
+    const el = document.querySelector(sel)
+    if (!el) return null
+    const b = el.getBoundingClientRect()
+    return { w: Math.round(b.width), h: Math.round(b.height), top: Math.round(b.top), bottom: Math.round(b.bottom) }
+  }
+  const controls = box('.fs-controls')
+  const lines = [...document.querySelectorAll('.FmKaba_lyricLineWrapper')].map((w) => {
+    const b = w.getBoundingClientRect()
+    return { h: Math.round(b.height), top: Math.round(b.top), bottom: Math.round(b.bottom) }
+  })
+  return {
+    lyrics: box('.fs-lyrics'),
+    compact: box('.fs-compact'),
+    art: box('.fs-art'),
+    controls,
+    onScreen: lines.filter((l) => l.h > 0 && l.bottom > 0 && l.top < window.innerHeight).length,
+    overlapping: controls
+      ? lines.filter((l) => l.h > 0 && l.bottom > controls.top && l.top < controls.bottom).length
+      : -1,
+  }
+})
+
+// The specific regression: the pane was 350x0. A display check alone would
+// have passed while showing nothing, so assert real height.
+ok('[mobile] lyrics pane has real height', (m.lyrics?.h ?? 0) > 200, JSON.stringify(m.lyrics))
+ok('[mobile] lyric lines are on screen', m.onScreen > 0, `onScreen=${m.onScreen}`)
+ok('[mobile] lyrics never overlap the transport', m.overlapping === 0, `overlapping=${m.overlapping}`)
+ok('[mobile] artwork collapses to the compact row',
+   (m.compact?.h ?? 0) > 0 && (m.art?.h ?? 0) === 0, JSON.stringify({ compact: m.compact?.h, art: m.art?.h }))
+
+await phone.screenshot({ path: '/tmp/shots/22-mobile-lyrics.png' })
+await phone.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
+await phone.waitForTimeout(500)
+await phone.screenshot({ path: '/tmp/shots/24-mobile-lyrics-dark.png' })
+await phone.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'))
+
+await toggle.click()
+await phone.waitForTimeout(1000)
+const back = await phone.evaluate(() => ({
+  art: document.querySelector('.fs-art')?.getBoundingClientRect().height ?? 0,
+  lyrics: document.querySelector('.fs-lyrics') !== null,
+}))
+ok('[mobile] toggling back restores the artwork', back.art > 100 && !back.lyrics, JSON.stringify(back))
+await phone.screenshot({ path: '/tmp/shots/23-mobile-artwork.png' })
+
+ok('[mobile] no uncaught errors', phoneErrors.length === 0, phoneErrors.slice(0, 2).join(' | '))
+await phone.close()
+
 ok('no uncaught page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
 
 console.log('\n' + (fail.length ? `FAILURES: ${fail.join(', ')}` : 'ALL FIXTURE CHECKS PASSED'))

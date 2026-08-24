@@ -146,9 +146,18 @@ Tracks with no lyrics show a quiet empty state.
 | <kbd>←</kbd> <kbd>→</kbd> | Seek ∓5s | | <kbd>N</kbd> / <kbd>P</kbd> | Next / previous |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Volume | | <kbd>F</kbd> | Full-screen player |
 | <kbd>/</kbd> | Focus search | | <kbd>Esc</kbd> | Close overlay |
+| <kbd>L</kbd> | Lyrics: open the player, or toggle lyrics once it is open | | | |
 
 In the queue, <kbd>Alt</kbd> + <kbd>↑</kbd>/<kbd>↓</kbd> reorders the focused
 track (the pointer equivalent is drag and drop).
+
+### Lyrics on small screens
+
+Wide screens show artwork and lyrics side by side. Below 900px there is only
+room for one, so the full-screen player opens on the artwork and the lyrics
+button in its header switches between the two — the artwork collapses to a
+compact row and the lyrics take the freed height, as Apple Music does on
+iPhone. The choice follows the viewport until you set it yourself.
 
 ## Development
 

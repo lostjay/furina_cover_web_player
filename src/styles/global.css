@@ -428,10 +428,78 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .fs-play:hover { background: var(--accent-hover); }
 
+/*
+ * The compact art + title row. It only exists on narrow screens showing lyrics,
+ * where the full artwork is collapsed to make room.
+ */
+.fs-compact { display: none; }
+
 @media (max-width: 900px) {
-  .fs-body { grid-template-columns: 1fr; gap: 20px; padding: 0 20px 24px; align-content: start; }
-  .fs-lyrics { display: none; }
+  .fs-body {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 0 20px 24px;
+    align-content: start;
+  }
   .fs-art { width: min(30vh, 240px); height: min(30vh, 240px); }
+
+  /*
+   * Lyrics mode on a phone. The artwork collapses to the compact row and the
+   * lyrics take the freed height.
+   *
+   * `minmax(0, 1fr)` on the middle row is load-bearing twice over: it gives the
+   * lyrics row a DEFINITE height, without which `.fs-lyrics { height: 100% }`
+   * resolves against an auto row and collapses to 0 (AMLL positions its lines
+   * absolutely, so they add no intrinsic height); and the 0 minimum lets that
+   * row shrink instead of being forced open.
+   */
+  .fullscreen.has-lyrics .fs-body {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-content: stretch;
+    gap: 14px;
+    min-height: 0;
+  }
+  .fullscreen.has-lyrics .fs-compact { display: flex; }
+  .fullscreen.has-lyrics .fs-art,
+  .fullscreen.has-lyrics .fs-meta { display: none; }
+  .fullscreen.has-lyrics .fs-left {
+    display: contents; /* let .fs-controls become a grid row of its own */
+  }
+  /*
+   * Rows are assigned explicitly rather than left to auto-placement: .fs-controls
+   * precedes .fs-lyrics in the DOM, so auto-placement would hand the flexible
+   * row to the controls and collapse the lyrics into the auto row below.
+   */
+  .fullscreen.has-lyrics .fs-compact { grid-row: 1; }
+  .fullscreen.has-lyrics .fs-lyrics {
+    grid-row: 2;
+    max-height: none;
+    min-height: 0;
+    /* Absolutely-positioned lines must never spill over the transport row. */
+    overflow: hidden;
+  }
+  .fullscreen.has-lyrics .fs-controls { grid-row: 3; width: 100%; }
+}
+
+.fs-compact {
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding-top: 4px;
+}
+.fs-compact-art {
+  width: 52px; height: 52px; flex: none;
+  border-radius: 8px; object-fit: cover;
+  box-shadow: var(--shadow-md);
+}
+.fs-compact-meta { min-width: 0; }
+.fs-compact-title {
+  font-size: 16px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fs-compact-artist {
+  font-size: 13px; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* ---------- lyrics ---------- */

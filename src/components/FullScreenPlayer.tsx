@@ -5,9 +5,16 @@ import { Backdrop } from './Backdrop'
 import { generateCoverDataUri } from '../art/generateCover'
 import {
   PlayIcon, PauseIcon, NextIcon, PrevIcon, ShuffleIcon, RepeatIcon, ChevronDownIcon,
+  LyricsIcon,
 } from './icons'
 
-export function FullScreenPlayer({ onClose }: { onClose: () => void }) {
+interface Props {
+  onClose: () => void
+  lyricsVisible: boolean
+  onToggleLyrics: () => void
+}
+
+export function FullScreenPlayer({ onClose, lyricsVisible, onToggleLyrics }: Props) {
   const { state, dispatch, engine, track, artworkFor } = usePlayer()
   const { currentTime, duration, buffered } = useTime()
 
@@ -16,9 +23,19 @@ export function FullScreenPlayer({ onClose }: { onClose: () => void }) {
   const total = duration > 0 ? duration : (track.durationSec ?? 0)
   // AMLL's background renderer gets livelier when the track has lyrics.
   const hasLyrics = Boolean(track.lyrics?.length || track.ttmlUrl || track.lrcUrl)
+  // The pane is mounted whenever lyrics are switched on, even for a track with
+  // none — it renders a helpful empty state, which is the long-standing desktop
+  // behaviour. The toggle itself is hidden when there is nothing to show, so a
+  // phone never lands on an empty pane.
+  const showLyrics = lyricsVisible
 
   return (
-    <div className="fullscreen" role="dialog" aria-modal="true" aria-label="Now playing">
+    <div
+      className={`fullscreen${showLyrics ? ' has-lyrics' : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Now playing"
+    >
       <Backdrop
         artwork={art}
         fallbackArtwork={generateCoverDataUri(track.id, track.title)}
@@ -31,10 +48,30 @@ export function FullScreenPlayer({ onClose }: { onClose: () => void }) {
           <ChevronDownIcon size={20} />
         </button>
         <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.7 }}>{track.albumTitle}</div>
-        <div style={{ width: 32 }} />
+        {hasLyrics ? (
+          <button
+            className="icon-btn"
+            onClick={onToggleLyrics}
+            aria-pressed={showLyrics}
+            aria-label={showLyrics ? 'Hide lyrics' : 'Show lyrics'}
+            title={showLyrics ? 'Hide lyrics' : 'Show lyrics'}
+          >
+            <LyricsIcon size={18} />
+          </button>
+        ) : (
+          <div style={{ width: 32 }} />
+        )}
       </div>
 
       <div className="fs-body">
+        <div className="fs-compact" aria-hidden="true">
+          <img className="fs-compact-art" src={art} alt="" />
+          <div className="fs-compact-meta">
+            <div className="fs-compact-title">{track.title}</div>
+            <div className="fs-compact-artist">{track.artist}</div>
+          </div>
+        </div>
+
         <div className="fs-left">
           <img className={`fs-art${state.isPlaying ? '' : ' is-paused'}`} src={art} alt="" />
 
@@ -90,7 +127,7 @@ export function FullScreenPlayer({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        <LyricsPane />
+        {showLyrics && <LyricsPane />}
       </div>
     </div>
   )
