@@ -12,6 +12,7 @@ import {
 } from 'react'
 import { AudioEngine, type TimeSnapshot } from '../audio/AudioEngine'
 import { parseLibrary, type Library, type Track } from '../types'
+import { resolveLibraryUrls } from '../media/resolveMediaUrl'
 import {
   playerReducer,
   initialPlayerState,
@@ -84,9 +85,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
       })
-      .then((json) => {
+      .then((json) => resolveLibraryUrls(parseLibrary(json)))
+      .then((library) => {
         if (cancelled) return
-        setLibrary(parseLibrary(json))
+        setLibrary(library)
       })
       .catch((err: unknown) => {
         if (cancelled) return

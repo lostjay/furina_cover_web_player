@@ -69,82 +69,39 @@ function rasterizeSvg(url: string): Promise<string> {
 }
 
 /**
- * Can the background renderer actually read this image?
+ * Resolve the image handed to BackgroundRender, rasterised if it is an SVG.
  *
- * AMLL loads the album art with `fetch(url).blob()` and an
- * `img.crossOrigin = "anonymous"`, so a cross-origin host must send a valid
- * `Access-Control-Allow-Origin`. When it does not, AMLL retries five times and
- * then renders nothing at all — indistinguishable from a broken player. Probing
- * with the same constraint lets us substitute something readable instead.
- *
- * Same-origin and data: URLs skip the probe entirely.
+ * AMLL loads the album art with `fetch(url).blob()` and
+ * `img.crossOrigin = "anonymous"`, so it needs the URL to be readable
+ * cross-origin. By the time `artwork` reaches this component it has already
+ * been resolved to a direct, CORS-correct CDN URL (see
+ * `src/media/resolveMediaUrl.ts`) or is a same-origin generated cover, so no
+ * separate readability probe is needed here.
  */
-const readableCache = new Map<string, boolean>()
-
-function isReadableForWebGL(url: string): Promise<boolean> {
-  if (url.startsWith('data:') || url.startsWith('blob:')) return Promise.resolve(true)
-  try {
-    if (new URL(url, window.location.href).origin === window.location.origin) {
-      return Promise.resolve(true)
-    }
-  } catch {
-    return Promise.resolve(false)
-  }
-
-  const cached = readableCache.get(url)
-  if (cached !== undefined) return Promise.resolve(cached)
-
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    const settle = (value: boolean) => {
-      readableCache.set(url, value)
-      resolve(value)
-    }
-    img.onload = () => settle(true)
-    img.onerror = () => {
-      console.warn(
-        `[backdrop] ${url} is not readable cross-origin (needs Access-Control-Allow-Origin); ` +
-          'falling back to the generated cover for the background.',
-      )
-      settle(false)
-    }
-    img.src = url
-  })
-}
-
-/**
- * Resolve the image handed to BackgroundRender: the real artwork when it is
- * readable, otherwise the generated cover, rasterised either way.
- */
-function useBackdropImage(artwork: string, fallback: string): string | null {
+function useBackdropImage(artwork: string): string | null {
   const [resolved, setResolved] = useState<string | null>(null)
 
   useEffect(() => {
     let live = true
-    void isReadableForWebGL(artwork)
-      .then((readable) => rasterizeSvg(readable ? artwork : fallback))
-      .then((url) => {
-        if (live) setResolved(url)
-      })
+    void rasterizeSvg(artwork).then((url) => {
+      if (live) setResolved(url)
+    })
     return () => {
       live = false
     }
-  }, [artwork, fallback])
+  }, [artwork])
 
   return resolved
 }
 
 interface Props {
   artwork: string
-  /** Generated cover, used when `artwork` cannot be read cross-origin. */
-  fallbackArtwork: string
   playing: boolean
   hasLyrics: boolean
 }
 
-export function Backdrop({ artwork, fallbackArtwork, playing, hasLyrics }: Props) {
-  const album = useBackdropImage(artwork, fallbackArtwork)
+export function Backdrop({ artwork, playing, hasLyrics }: Props) {
+  const album = useBackdropImage(artwork)
 
   if (!hasWebGL()) {
     return (

@@ -2,7 +2,6 @@ import { usePlayer, useTime } from '../state/PlayerProvider'
 import { Scrubber, formatTime } from './Scrubber'
 import { LyricsPane } from './LyricsPane'
 import { Backdrop } from './Backdrop'
-import { generateCoverDataUri } from '../art/generateCover'
 import {
   PlayIcon, PauseIcon, NextIcon, PrevIcon, ShuffleIcon, RepeatIcon, ChevronDownIcon,
   LyricsIcon,
@@ -36,12 +35,7 @@ export function FullScreenPlayer({ onClose, lyricsVisible, onToggleLyrics }: Pro
       aria-modal="true"
       aria-label="Now playing"
     >
-      <Backdrop
-        artwork={art}
-        fallbackArtwork={generateCoverDataUri(track.id, track.title)}
-        playing={state.isPlaying}
-        hasLyrics={hasLyrics}
-      />
+      <Backdrop artwork={art} playing={state.isPlaying} hasLyrics={hasLyrics} />
 
       <div className="fs-head">
         <button className="icon-btn" onClick={onClose} aria-label="Close full screen player">

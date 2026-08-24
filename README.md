@@ -52,15 +52,13 @@ those are web pages, not audio files.
 
 Cross-origin audio URLs need no CORS headers — plain media playback performs no
 CORS check, and the player deliberately never sets `crossOrigin` on the audio
-element because that *would* opt into a check many media hosts fail. Redirects
-(e.g. an origin that 302s to presigned R2/S3 storage) are followed
-transparently. For scrubbing, the host must honour `Range` requests — most
-object storage does.
+element because that *would* opt into a check many media hosts fail. For
+scrubbing, the host must honour `Range` requests — most object storage does.
 
 ### CORS *is* required for lyrics and the fluid background
 
-Three things are not like audio, because they are read rather than merely
-played, and every one of them is CORS-checked:
+Two things are not like audio, because they are read rather than merely
+played, and both are CORS-checked:
 
 | What | How it is loaded |
 |---|---|
@@ -92,9 +90,37 @@ add_header Access-Control-Allow-Origin "*" always;
 ```
 
 Cover art shown in the track list and album header is a plain `<img>` and works
-without any of this; only the animated background needs read access. When the
-artwork cannot be read, the player logs a warning and falls back to a generated
-gradient for the background rather than rendering nothing.
+without any of this CORS setup at all — only the animated background needs
+read access.
+
+#### `/public/…` URLs get one extra hop, to dodge a "null origin" trap
+
+`lostjay.xyz` fronts object storage (Cloudflare R2): a plain GET for a
+`/public/…` path 302-redirects to a presigned R2 URL rather than serving the
+file itself. Naively `fetch()`-ing that path directly runs into a corner of
+the fetch spec: once a cross-origin request changes origin *again* on a
+redirect, the browser resends the follow-up request with `Origin: null` — and
+R2's CORS policy, which matches real origins, doesn't match `null`. The read
+then fails with an opaque CORS error even though the CORS setup above is
+otherwise correct.
+
+The fix is to never let the browser follow that redirect. Request the same
+path with `Accept: application/json` and the host answers with
+`{ "url": "<direct R2 URL>" }` (HTTP 200) instead of redirecting.
+[`src/media/resolveMediaUrl.ts`](src/media/resolveMediaUrl.ts) does this for
+every `/public/…` URL in the manifest — artwork, audio, and lyrics alike —
+before anything else touches it, so the rest of the app only ever sees a
+direct, already-CORS-correct CDN URL. A URL outside `/public/…` is left
+untouched: no extra request, no assumption that the host speaks this
+convention.
+
+Because of this, `Backdrop` no longer needs to probe whether the artwork is
+readable before handing it to `BackgroundRender` — it always is, by
+construction. The generated-gradient fallback still exists, but only for the
+simpler case of a track with no `artworkUrl` at all (see Artwork below); a
+`/public/…` URL that is genuinely unreachable (bad path, expired link) is a
+broken manifest entry, not a CORS problem, and is left to fail visibly rather
+than silently swapped for something else.
 
 ### Artwork
 
