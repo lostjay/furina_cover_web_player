@@ -9,7 +9,7 @@ for the lyric player and the fluid artwork background.
 
 ```bash
 npm install
-npm run dev          # http://localhost:5173/furina_cover_web_player/
+npm run dev          # http://localhost:5173/
 ```
 
 ## Adding your music
@@ -68,10 +68,26 @@ played, and every one of them is CORS-checked:
 | Background artwork | AMLL does `fetch(url).blob()` **and** sets `img.crossOrigin = "anonymous"` |
 
 So a media host must send a **valid** `Access-Control-Allow-Origin`. Valid means
-`*`, `null`, or one exact origin — **a wildcard in the subdomain position such as
-`https://*.example.com` is not legal and matches nothing.** For nginx:
+`*`, `null`, or one exact origin, compared as a literal string — **a wildcard in
+the subdomain position such as `https://*.example.com` is not legal and matches
+nothing.**
+
+This matters here because the player is served from `furina-cover.lostjay.xyz`
+while the media lives on `lostjay.xyz`. **A subdomain is a separate origin**, so
+those requests are cross-origin and the header is required. For nginx, either:
 
 ```nginx
+# Allow any lostjay.xyz subdomain, by reflecting the request's Origin.
+map $http_origin $cors_origin {
+    default "";
+    "~^https://([a-z0-9-]+\.)?lostjay\.xyz$" $http_origin;
+}
+add_header Access-Control-Allow-Origin $cors_origin always;
+add_header Vary Origin always;   # or caches will hand the wrong ACAO to others
+```
+
+```nginx
+# Or, simplest for public media:
 add_header Access-Control-Allow-Origin "*" always;
 ```
 
@@ -178,10 +194,21 @@ backdrop, and the suite asserts that path instead.
 
 ## Deploying
 
+The site runs at **`furina-cover.lostjay.xyz`**, served from that host's root,
+so `vite.config.ts` sets `base` to `/`.
+
 The GitHub Actions workflow in `.github/workflows/deploy.yml` builds and
-publishes to GitHub Pages on every push to the default branch. `vite.config.ts`
-sets `base` to `/furina_cover_web_player/` to match the Pages project path; for
-any other host, build with `BASE_PATH=/ npm run build`.
+publishes to GitHub Pages on every push to the default branch. `public/CNAME`
+carries the custom domain — GitHub Pages clears the domain setting on each
+deploy unless that file is in the published output. If you serve the subdomain
+from your own server instead, `public/CNAME` and the workflow are both inert and
+can be deleted.
+
+To publish under a GitHub Pages *project* path (`/<repo>/`) instead, build with:
+
+```bash
+BASE_PATH=/furina_cover_web_player/ npm run build
+```
 
 ## Notes on the architecture
 
