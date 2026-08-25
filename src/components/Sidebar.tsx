@@ -12,26 +12,26 @@ export function Sidebar({ view, onNavigate, onNewPlaylist }: Props) {
   const { library, playlists, removePlaylist } = usePlayer()
 
   return (
-    <nav className="sidebar" aria-label="Library">
+    <nav className="sidebar" aria-label="资料库">
       <div className="brand">
         <span className="brand-mark" aria-hidden="true" />
-        Furina Covers
+        芙宁娜翻唱
       </div>
 
-      <div className="nav-heading">Library</div>
+      <div className="nav-heading">资料库</div>
       <button
         className="nav-item"
         aria-current={view.kind === 'library'}
         onClick={() => onNavigate({ kind: 'library' })}
       >
         <span className="glyph"><MusicIcon size={15} /></span>
-        <span className="label">Songs</span>
+        <span className="label">歌曲</span>
       </button>
 
       {/* One album duplicates "Songs", and it is the home view anyway. */}
       {library && library.albums.length > 1 && (
         <>
-          <div className="nav-heading">Albums</div>
+          <div className="nav-heading">专辑</div>
           {library.albums.map((album) => (
             <button
               key={album.id}
@@ -46,7 +46,7 @@ export function Sidebar({ view, onNavigate, onNewPlaylist }: Props) {
         </>
       )}
 
-      <div className="nav-heading">Playlists</div>
+      <div className="nav-heading">播放列表</div>
       {playlists.map((pl) => (
         <div key={pl.id} style={{ display: 'flex', alignItems: 'center' }}>
           <button
@@ -61,14 +61,14 @@ export function Sidebar({ view, onNavigate, onNewPlaylist }: Props) {
             className="icon-btn"
             style={{ width: 26, height: 26, flex: 'none' }}
             onClick={() => removePlaylist(pl.id)}
-            aria-label={`Delete playlist ${pl.name}`}
+            aria-label={`删除播放列表 ${pl.name}`}
           >
             <TrashIcon size={13} />
           </button>
         </div>
       ))}
       <button className="sidebar-action" onClick={onNewPlaylist}>
-        <PlusIcon size={14} /> New Playlist
+        <PlusIcon size={14} /> 新建播放列表
       </button>
 
       {/*
@@ -81,7 +81,7 @@ export function Sidebar({ view, onNavigate, onNewPlaylist }: Props) {
         target="_blank"
         rel="noreferrer noopener"
       >
-        Source code (AGPL-3.0)
+        源代码（AGPL-3.0）
       </a>
     </nav>
   )

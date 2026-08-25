@@ -2,6 +2,7 @@ import { usePlayer } from '../state/PlayerProvider'
 import { TrackRow } from './TrackRow'
 import { matches } from '../search/normalize'
 import { PlayIcon, ShuffleIcon } from './icons'
+import { songCount } from '../i18n/labels'
 import type { Track } from '../types'
 import type { View } from '../App'
 
@@ -17,16 +18,16 @@ export function LibraryView({ view, query }: Props) {
     return (
       <div className="content">
         <div className="empty">
-          <strong>Could not load tracks.json</strong>
+          <strong>无法加载 tracks.json</strong>
           {loadError}
         </div>
       </div>
     )
   }
-  if (!library) return <div className="content"><div className="empty">Loading library…</div></div>
+  if (!library) return <div className="content"><div className="empty">正在加载资料库…</div></div>
 
   // Resolve the current view to a title and an ordered list of tracks.
-  let title = 'Songs'
+  let title = '歌曲'
   let subtitle = ''
   let ids: string[] = library.order
   let album = null
@@ -39,11 +40,11 @@ export function LibraryView({ view, query }: Props) {
     }
   } else if (view.kind === 'playlist') {
     const pl = playlists.find((p) => p.id === view.playlistId)
-    title = pl?.name ?? 'Playlist'
+    title = pl?.name ?? '播放列表'
     ids = pl?.trackIds ?? []
-    subtitle = `${ids.length} song${ids.length === 1 ? '' : 's'}`
+    subtitle = songCount(ids.length)
   } else {
-    subtitle = `${ids.length} song${ids.length === 1 ? '' : 's'}`
+    subtitle = songCount(ids.length)
   }
 
   const all = ids
@@ -66,24 +67,26 @@ export function LibraryView({ view, query }: Props) {
     <div className="content">
       {album ? (
         <div className="album-hero">
-          <img
-            className="album-hero-art"
-            src={album.artworkUrl ?? (tracks[0] ? artworkFor(tracks[0]) : '')}
-            alt=""
-          />
+          <div className="album-hero-art-wrap">
+            <img
+              className="album-hero-art"
+              src={album.artworkUrl ?? (tracks[0] ? artworkFor(tracks[0]) : '')}
+              alt=""
+            />
+          </div>
           <div className="album-hero-meta">
             <h2>{album.title}</h2>
             <div className="artist">{album.artist}</div>
             <div className="detail">
               {album.year ? `${album.year} · ` : ''}
-              {album.trackIds.length} song{album.trackIds.length === 1 ? '' : 's'}
+              {songCount(album.trackIds.length)}
             </div>
             <div className="album-actions">
               <button className="btn-filled" onClick={() => playFrom()} disabled={tracks.length === 0}>
-                <PlayIcon size={13} /> Play
+                <PlayIcon size={13} /> 播放
               </button>
               <button className="btn-tinted" onClick={shufflePlay} disabled={tracks.length === 0}>
-                <ShuffleIcon size={13} /> Shuffle
+                <ShuffleIcon size={13} /> 随机播放
               </button>
             </div>
           </div>
@@ -99,18 +102,18 @@ export function LibraryView({ view, query }: Props) {
         <div className="empty">
           {query.trim() ? (
             <>
-              <strong>No results for “{query}”</strong>
-              Try a different title or artist.
+              <strong>没有找到“{query}”</strong>
+              换一个歌名或歌手试试。
             </>
           ) : view.kind === 'playlist' ? (
             <>
-              <strong>This playlist is empty</strong>
-              Add songs from the library with the + button on a row.
+              <strong>这个播放列表是空的</strong>
+              在资料库中用歌曲右侧的 + 按钮添加歌曲。
             </>
           ) : (
             <>
-              <strong>No tracks yet</strong>
-              Add entries to <code>public/tracks.json</code>.
+              <strong>还没有歌曲</strong>
+              请在 <code>public/tracks.json</code> 中添加条目。
             </>
           )}
         </div>

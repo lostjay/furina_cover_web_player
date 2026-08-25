@@ -23,6 +23,7 @@ import {
 import { loadPlaylists, savePlaylists, createPlaylist, type Playlist } from './playlists'
 import { readJson, writeJson } from './storage'
 import { generateCoverDataUri } from '../art/generateCover'
+import { extractPalette, seedPalette, type Palette } from '../art/palette'
 
 interface PlayerContextValue {
   library: Library | null
@@ -32,6 +33,8 @@ interface PlayerContextValue {
   engine: AudioEngine
   track: Track | undefined
   artworkFor: (track: Track) => string
+  /** Colours sampled from the current track's cover. Never null. */
+  palette: Palette
   playlists: Playlist[]
   addPlaylist: (name: string) => void
   removePlaylist: (id: string) => void
@@ -180,6 +183,37 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  // --- album colour -----------------------------------------------------
+  //
+  // Sampling the cover is asynchronous, so the seed palette stands in until the
+  // real one lands. That keeps the UI coloured from the first frame instead of
+  // flashing grey, and is also the permanent answer for a track whose artwork
+  // cannot be read back.
+  const [palette, setPalette] = useState<Palette>(() => seedPalette(''))
+
+  useEffect(() => {
+    if (!track) return
+    let live = true
+    setPalette(seedPalette(track.id))
+    void extractPalette(artworkFor(track), track.id).then((next) => {
+      if (live) setPalette(next)
+    })
+    return () => {
+      live = false
+    }
+  }, [track, artworkFor])
+
+  // Publish the palette as custom properties so plain CSS can tint anything —
+  // the aurora backdrop, accents, glows — without threading colours through
+  // every component's props or inline styles.
+  useEffect(() => {
+    const root = document.documentElement
+    palette.swatches.forEach((colour, i) => root.style.setProperty(`--art-${i + 1}`, colour))
+    root.style.setProperty('--art-dominant', palette.dominant)
+    root.style.setProperty('--art-on-light', palette.onLight)
+    root.style.setProperty('--art-on-dark', palette.onDark)
+  }, [palette])
+
   // --- OS media integration --------------------------------------------
   useEffect(() => {
     if (!('mediaSession' in navigator) || !track) return
@@ -223,6 +257,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     engine,
     track,
     artworkFor,
+    palette,
     playlists,
     addPlaylist: (name) => persist([...playlists, createPlaylist(name)]),
     removePlaylist: (id) => persist(playlists.filter((p) => p.id !== id)),

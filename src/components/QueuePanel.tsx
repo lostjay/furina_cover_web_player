@@ -3,7 +3,7 @@ import { usePlayer } from '../state/PlayerProvider'
 import { CloseIcon, TrashIcon } from './icons'
 
 /**
- * "Playing Next". Reordering works by pointer drag and, for keyboard users,
+ * 播放队列。Reordering works by pointer drag and, for keyboard users,
  * alt+ArrowUp / alt+ArrowDown on a focused row.
  */
 export function QueuePanel({ onClose }: { onClose: () => void }) {
@@ -19,16 +19,16 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <aside className="queue-panel" aria-label="Playing next">
+    <aside className="queue-panel" aria-label="播放队列">
       <div className="queue-head">
-        <h2>Playing Next</h2>
-        <button className="icon-btn" onClick={onClose} aria-label="Close queue">
+        <h2>播放队列</h2>
+        <button className="icon-btn" onClick={onClose} aria-label="关闭播放队列">
           <CloseIcon size={17} />
         </button>
       </div>
 
       {state.order.length === 0 ? (
-        <div className="empty">The queue is empty.</div>
+        <div className="empty">播放队列是空的。</div>
       ) : (
         <ul className="queue-list">
           {state.order.map((id, i) => {
@@ -75,7 +75,7 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
                   }}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${track.title} — position ${i + 1} of ${state.order.length}. Alt with arrow keys to reorder.`}
+                  aria-label={`${track.title} — 第 ${i + 1} 首，共 ${state.order.length} 首。按住 Alt 加方向键可调整顺序。`}
                   onClick={() => dispatch({ type: 'jumpTo', index: i })}
                 >
                   <img className="queue-art" src={artworkFor(track)} alt="" />
@@ -90,7 +90,7 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
                       e.stopPropagation()
                       dispatch({ type: 'removeAt', index: i })
                     }}
-                    aria-label={`Remove ${track.title} from queue`}
+                    aria-label={`将 ${track.title} 移出播放队列`}
                   >
                     <TrashIcon size={14} />
                   </button>

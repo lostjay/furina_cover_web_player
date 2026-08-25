@@ -7,6 +7,7 @@ import { FullScreenPlayer } from './components/FullScreenPlayer'
 import { QueuePanel } from './components/QueuePanel'
 import { SearchIcon, SunIcon, MoonIcon, QueueIcon } from './components/icons'
 import { readJson, writeJson } from './state/storage'
+import { themeLabel } from './i18n/labels'
 
 export type View =
   | { kind: 'library' }
@@ -139,7 +140,7 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [dispatch, engine, state.volume, track, fullscreen, queueOpen, dialogOpen, toggleLyrics])
 
-  const themeLabel = theme === 'system' ? 'Theme: system' : `Theme: ${theme}`
+  const themeText = themeLabel(theme)
 
   return (
     <div className="app">
@@ -164,8 +165,8 @@ export function App() {
               ref={searchRef}
               type="search"
               value={query}
-              placeholder="Search songs, artists…"
-              aria-label="Search library"
+              placeholder="搜索歌曲、歌手…"
+              aria-label="搜索资料库"
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
@@ -174,11 +175,11 @@ export function App() {
             className="icon-btn"
             onClick={() => setQueueOpen((v) => !v)}
             aria-pressed={queueOpen}
-            aria-label="Playing next"
+            aria-label="播放队列"
           >
             <QueueIcon size={17} />
           </button>
-          <button className="icon-btn" onClick={cycleTheme} aria-label={themeLabel} title={themeLabel}>
+          <button className="icon-btn" onClick={cycleTheme} aria-label={themeText} title={themeText}>
             {theme === 'dark' ? <MoonIcon size={16} /> : <SunIcon size={16} />}
           </button>
         </div>
@@ -204,13 +205,13 @@ export function App() {
       {dialogOpen && (
         <>
           <div className="scrim" onClick={() => setDialogOpen(false)} />
-          <div className="dialog" role="dialog" aria-modal="true" aria-label="New playlist">
-            <h2>New Playlist</h2>
+          <div className="dialog" role="dialog" aria-modal="true" aria-label="新建播放列表">
+            <h2>新建播放列表</h2>
             <input
               autoFocus
               value={playlistName}
-              placeholder="Playlist name"
-              aria-label="Playlist name"
+              placeholder="播放列表名称"
+              aria-label="播放列表名称"
               onChange={(e) => setPlaylistName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && playlistName.trim()) {
@@ -220,7 +221,7 @@ export function App() {
               }}
             />
             <div className="dialog-actions">
-              <button className="cancel" onClick={() => setDialogOpen(false)}>Cancel</button>
+              <button className="cancel" onClick={() => setDialogOpen(false)}>取消</button>
               <button
                 className="confirm"
                 disabled={!playlistName.trim()}
@@ -229,7 +230,7 @@ export function App() {
                   setDialogOpen(false)
                 }}
               >
-                Create
+                创建
               </button>
             </div>
           </div>
@@ -238,7 +239,7 @@ export function App() {
 
       {/* Announce track changes to screen readers without a visual change. */}
       <div className="visually-hidden" role="status" aria-live="polite">
-        {track ? `${track.title} by ${track.artist}` : ''}
+        {track ? `正在播放 ${track.title} — ${track.artist}` : ''}
       </div>
     </div>
   )

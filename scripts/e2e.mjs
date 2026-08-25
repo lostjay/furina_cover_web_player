@@ -35,8 +35,47 @@ ok('library renders fixture tracks', rows === 3, `rows=${rows}`)
 // is suppressed because it would just duplicate "Songs".
 ok('opens on the album hero', await page.locator('.album-hero').count() === 1)
 ok('Albums nav hidden for a single album',
-   (await page.locator('.nav-heading', { hasText: 'Albums' }).count()) === 0)
+   (await page.locator('.nav-heading', { hasText: '专辑' }).count()) === 0)
+// The UI is Chinese throughout; guard against an English string creeping back.
+ok('nav is in Chinese',
+   (await page.locator('.nav-heading').first().innerText()).trim() === '资料库')
 ok('CJK title renders', (await page.locator('.track-title').first().innerText()).includes('赤伶'))
+
+// --- palette extraction ----------------------------------------------
+// The unit tests cover the quantiser's maths on synthetic pixel arrays; only a
+// real browser can show that the canvas draw and getImageData readback that
+// feed it actually work. Drive it with images whose answer is known.
+const paletteProbe = await page.evaluate(async () => {
+  const swatch = (css) => {
+    const c = document.createElement('canvas')
+    c.width = c.height = 64
+    const x = c.getContext('2d')
+    x.fillStyle = css
+    x.fillRect(0, 0, 64, 64)
+    return c.toDataURL('image/png')
+  }
+  const hueOf = (colour) => Number(/^hsl\((\d+)/.exec(colour)?.[1] ?? NaN)
+  const crimson = await window.__extractPalette(swatch('#d6163c'), 'probe-crimson')
+  const green = await window.__extractPalette(swatch('#1fa84e'), 'probe-green')
+  return {
+    crimsonHue: hueOf(crimson.dominant),
+    greenHue: hueOf(green.dominant),
+    swatches: crimson.swatches.length,
+  }
+})
+const nearHue = (a, b) => { const d = Math.abs(a - b) % 360; return (d > 180 ? 360 - d : d) < 25 }
+ok('samples a red image as red', nearHue(paletteProbe.crimsonHue, 349), `h=${paletteProbe.crimsonHue}`)
+ok('samples a green image as green', nearHue(paletteProbe.greenHue, 141), `h=${paletteProbe.greenHue}`)
+ok('palette always fills five swatches', paletteProbe.swatches === 5, `n=${paletteProbe.swatches}`)
+
+// The whole UI tints from the current track, so the variables must reach :root.
+const rootVars = await page.evaluate(() => {
+  const cs = getComputedStyle(document.documentElement)
+  return ['--art-1', '--art-2', '--art-3', '--art-4', '--art-5', '--art-dominant',
+          '--art-on-light', '--art-on-dark'].map((k) => cs.getPropertyValue(k).trim())
+})
+ok('album palette is published to :root',
+   rootVars.length === 8 && rootVars.every((v) => /^(hsl|rgb|#)/.test(v)), JSON.stringify(rootVars))
 
 // Click the first track and confirm real playback.
 await page.locator('.track-row').first().click()
@@ -50,7 +89,7 @@ ok('audio element exists', audio !== null)
 ok('audio is playing', audio && audio.paused === false, JSON.stringify(audio))
 ok('currentTime advanced', audio && audio.currentTime > 0.3, `t=${audio?.currentTime?.toFixed(2)}`)
 ok('duration decoded ~12s', audio && Math.abs(audio.duration - 12) < 1.5, `d=${audio?.duration?.toFixed(2)}`)
-ok('crossOrigin NOT set (would break on this media host)', audio && !audio.crossOrigin, `crossOrigin=${JSON.stringify(audio?.crossOrigin)}`)
+ok('crossOrigin NOT set on audio (plain playback needs no CORS check)', audio && !audio.crossOrigin, `crossOrigin=${JSON.stringify(audio?.crossOrigin)}`)
 
 // Seeking
 await page.evaluate(() => { document.querySelector('audio[data-audio-engine="main"]').currentTime = 6 })
@@ -74,16 +113,73 @@ const lyricText = await page.locator('.fs-lyrics').innerText()
 ok('AMLL parsed the TTML fixture', lyricText.includes('Alpha') && lyricText.includes('papa'),
    JSON.stringify(lyricText.replace(/\s+/g, ' ').slice(0, 90)))
 
-// The background: either a live WebGL canvas, or the documented CSS fallback.
+// The backdrop. The palette-driven aurora is the layer that must ALWAYS be
+// there — it is what guarantees the screen carries the album's colour even
+// when WebGL is missing. AMLL's fluid canvas is an enhancement over it.
 const bg = await page.evaluate(() => {
   const canvas = document.querySelector('.fs-bg-render canvas')
-  if (canvas) {
-    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
-    return { mode: 'webgl', ok: !!gl, w: canvas.width, h: canvas.height }
+  const aurora = document.querySelector('.fs-aurora')
+  const blobColours = [...document.querySelectorAll('.fs-blob')].map(
+    (b) => getComputedStyle(b).getPropertyValue('--blob').trim(),
+  )
+  return {
+    blobs: blobColours.length,
+    blobColours,
+    auroraSized: aurora ? aurora.getBoundingClientRect().width > window.innerWidth : false,
+    veil: !!document.querySelector('.fs-veil'),
+    motes: document.querySelectorAll('.fs-mote').length,
+    webgl: canvas ? !!(canvas.getContext('webgl2') ?? canvas.getContext('webgl')) : false,
   }
-  return { mode: 'fallback', ok: !!document.querySelector('.fs-backdrop img') }
 })
-ok(`background renders (${bg.mode})`, bg.ok, JSON.stringify(bg))
+ok('aurora paints five album-coloured blobs', bg.blobs === 5, `blobs=${bg.blobs}`)
+ok('every blob resolved to a real colour',
+   bg.blobColours.length === 5 && bg.blobColours.every((c) => /^(hsl|rgb|#)/.test(c)),
+   JSON.stringify(bg.blobColours))
+// The blur container is inset negatively so its feathered edge falls off-screen.
+ok('aurora extends past the viewport', bg.auroraSized)
+ok('veil and motes present', bg.veil && bg.motes > 0, `motes=${bg.motes}`)
+ok('AMLL fluid background renders over it', bg.webgl, JSON.stringify(bg.webgl))
+
+// The regression this whole change exists to prevent: a full-screen player with
+// the album's colour washed out of it.
+//
+// This measures the FINAL COMPOSITED pixels rather than any one layer, which is
+// the only thing that actually reflects what a person sees — the old design
+// failed precisely because a heavy scrim flattened layers that were themselves
+// fine. WebGL's drawing buffer is cleared once the frame is presented, so
+// reading the canvas back directly yields zeroes; screenshotting and decoding
+// the image sidesteps that and covers the whole stack at once.
+const patch = await page.screenshot({ clip: { x: 16, y: 110, width: 110, height: 110 } })
+const backdrop = await page.evaluate(async (dataUri) => {
+  const img = new Image()
+  await new Promise((res) => { img.onload = res; img.src = dataUri })
+  const c = document.createElement('canvas')
+  c.width = img.width
+  c.height = img.height
+  const x = c.getContext('2d')
+  x.drawImage(img, 0, 0)
+  const d = x.getImageData(0, 0, c.width, c.height).data
+  let chroma = 0, light = 0, n = 0
+  for (let i = 0; i < d.length; i += 4) {
+    const mx = Math.max(d[i], d[i + 1], d[i + 2])
+    const mn = Math.min(d[i], d[i + 1], d[i + 2])
+    chroma += mx - mn
+    light += (mx + mn) / 2
+    n++
+  }
+  return { chroma: +(chroma / n).toFixed(1), light: +(light / n).toFixed(1) }
+}, `data:image/png;base64,${patch.toString('base64')}`)
+
+// Two independent signals, because the failure had two halves.
+// Chroma catches a genuinely greyscale backdrop.
+ok('backdrop carries album colour, not greyscale', backdrop.chroma > 20, JSON.stringify(backdrop))
+// Lightness catches the actual regression: the old light-theme scrim laid 58-76%
+// white over the artwork, which left some chroma intact but pushed the plate to
+// ~198 — a pale slab. The veil now darkens the backdrop in both themes, so a
+// healthy composite lands near 70 whatever the cover is, and anything above 170
+// means a wash has crept back in.
+ok('backdrop is not washed out to a pale or black plate',
+   backdrop.light > 25 && backdrop.light < 170, JSON.stringify(backdrop))
 
 // The actual point of adopting AMLL: the highlight must move WITHIN a line,
 // not just between lines. Sample the first line's word spans at two times

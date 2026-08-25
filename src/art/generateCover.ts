@@ -1,10 +1,10 @@
 /**
  * Deterministic placeholder cover art.
  *
- * Needed for two reasons: the manifest's `artworkUrl` is optional, and the media
- * origin's CORS header is malformed, so remote artwork cannot be colour-sampled
- * via canvas. A generated cover always yields a usable palette, and keeps
- * copyrighted artwork out of the repository.
+ * The manifest's `artworkUrl` is optional, so a track may have no artwork at
+ * all; this fills the gap and keeps copyrighted images out of the repository.
+ * It also backs `seedPalette` in ./palette.ts, which needs a usable set of
+ * colours even when there is no cover to sample.
  *
  * The same track id always produces the same cover, so the library does not
  * reshuffle its colours between reloads.

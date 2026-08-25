@@ -6,11 +6,8 @@
  *     Constructing a new element mid-session loses the user-gesture autoplay
  *     grant, so the second track would silently fail to start.
  *  2. `crossOrigin` is never set. Plain media playback performs no CORS check
- *     at all; setting the attribute would opt into one for no benefit, since
- *     nothing here reads the audio's samples. `track.audioUrl` also arrives
- *     here already resolved to a direct CDN URL (see
- *     `src/media/resolveMediaUrl.ts`), so there is no redirect for the
- *     element to follow either.
+ *     at all, and nothing here reads the audio's samples, so the attribute
+ *     would opt into a check that buys nothing.
  *
  * `currentTime` is exposed through a subscribe/getSnapshot pair rather than React
  * state: it changes ~4x/second and would otherwise re-render the whole tree.
