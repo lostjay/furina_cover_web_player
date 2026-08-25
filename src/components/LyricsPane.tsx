@@ -40,11 +40,11 @@ export function LyricsPane({ className = 'fs-lyrics' }: { className?: string }) 
       <div className={className}>
         <div className="lyrics-empty">
           <div>
-            No lyrics for this track yet.
+            这首歌还没有歌词。
             <br />
             <span style={{ fontSize: 12.5 }}>
-              Add a <code>ttmlUrl</code>, <code>lrcUrl</code> or inline <code>lyrics</code> in
-              tracks.json.
+              可在 tracks.json 中添加 <code>ttmlUrl</code>、<code>lrcUrl</code> 或内联的{' '}
+              <code>lyrics</code> 字段。
             </span>
           </div>
         </div>

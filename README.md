@@ -1,8 +1,9 @@
 # Furina Covers — web player
 
-An Apple Music–style web player for Furina song covers. Light "Fontaine" theme by
-default, with a full dark mode, a full-screen Now Playing view, time-synced
-lyrics, search, a reorderable queue, and playlists.
+An Apple Music–style web player for Furina song covers, with a Chinese interface
+throughout. Light "Fontaine" theme by default, with a full dark mode, a
+full-screen Now Playing view whose backdrop is painted from the current cover's
+own colours, time-synced lyrics, search, a reorderable queue, and playlists.
 
 Built with Vite + React + TypeScript, using [AMLL](https://github.com/amll-dev/applemusic-like-lyrics)
 for the lyric player and the fluid artwork background.
@@ -52,20 +53,18 @@ those are web pages, not audio files.
 
 Cross-origin audio URLs need no CORS headers — plain media playback performs no
 CORS check, and the player deliberately never sets `crossOrigin` on the audio
-element because that *would* opt into a check many media hosts fail. Redirects
-(e.g. an origin that 302s to presigned R2/S3 storage) are followed
-transparently. For scrubbing, the host must honour `Range` requests — most
-object storage does.
+element. For scrubbing, the host must honour `Range` requests — most object
+storage does.
 
-### CORS *is* required for lyrics and the fluid background
+### Reads need `Access-Control-Allow-Origin`
 
-Three things are not like audio, because they are read rather than merely
-played, and every one of them is CORS-checked:
+Some things are read rather than merely played, and those are CORS-checked:
 
 | What | How it is loaded |
 |---|---|
 | Lyric files (`lrcUrl` / `ttmlUrl`) | `fetch()` |
-| Background artwork | AMLL does `fetch(url).blob()` **and** sets `img.crossOrigin = "anonymous"` |
+| Background artwork | AMLL does `fetch(url).blob()` and sets `img.crossOrigin = "anonymous"` |
+| Cover colour sampling | `img.crossOrigin = "anonymous"`, then a canvas `getImageData` readback |
 
 So a media host must send a **valid** `Access-Control-Allow-Origin`. Valid means
 `*`, `null`, or one exact origin, compared as a literal string — **a wildcard in
@@ -91,10 +90,41 @@ add_header Vary Origin always;   # or caches will hand the wrong ACAO to others
 add_header Access-Control-Allow-Origin "*" always;
 ```
 
-Cover art shown in the track list and album header is a plain `<img>` and works
-without any of this; only the animated background needs read access. When the
-artwork cannot be read, the player logs a warning and falls back to a generated
-gradient for the background rather than rendering nothing.
+Cover art shown in the track list and album header is a plain `<img>`, which
+needs none of this — only reading the pixels does.
+
+#### `/public/…` URLs are resolved before use
+
+`lostjay.xyz` fronts object storage (Cloudflare R2): a plain GET for a
+`/public/…` path 302-redirects to a presigned R2 URL rather than serving the
+file itself. Requesting the same path with `Accept: application/json` instead
+answers `{ "url": "<direct R2 URL>" }` with HTTP 200.
+
+[`src/media/resolveMediaUrl.ts`](src/media/resolveMediaUrl.ts) does this for
+every `/public/…` URL in the manifest — artwork, audio, and lyrics alike —
+before anything else touches it, so the rest of the app only ever sees a direct
+URL and reaches object storage in a single hop. A URL outside `/public/…` is
+left untouched: no extra request, no assumption that the host speaks this
+convention.
+
+Both endpoints carry `Access-Control-Allow-Origin`, so artwork can be sampled
+for colour and lyrics can be fetched without any further workaround. A
+`/public/…` URL that is genuinely unreachable (bad path, expired link) is a
+broken manifest entry and is left to fail visibly rather than silently swapped
+for something else.
+
+### Album colour
+
+The full-screen player is painted from the current cover's own colours. The
+image is drawn into a small offscreen canvas and its pixels bucketed by hue
+(see [`src/art/palette.ts`](src/art/palette.ts)), which yields a handful of
+vivid swatches. Those become the animated backdrop and tint the accents across
+the rest of the UI.
+
+Sampling needs canvas read access, so it needs the CORS header above. When it
+is unavailable — no `artworkUrl`, a host without the header, a decode failure —
+the palette falls back to the same deterministic seed colours as the generated
+placeholder cover, so the player is never left grey.
 
 ### Artwork
 
@@ -189,8 +219,10 @@ npm run build        # typecheck + production bundle
 loads `?manifest=dev`, a local fixture manifest, so the browser tests never
 depend on network access or on remote media staying up. It launches Chromium
 with SwiftShader because AMLL's background renderer needs WebGL and CI machines
-have no GPU; if WebGL is genuinely unavailable the app falls back to a CSS blur
-backdrop, and the suite asserts that path instead.
+have no GPU. The palette-driven aurora underneath it is plain CSS and renders
+regardless, so a machine without WebGL still gets a full-colour backdrop; the
+suite asserts both layers, and measures the composited pixels to catch a scrim
+washing the album's colour back out.
 
 ## Deploying
 

@@ -22,7 +22,7 @@ export function TrackRow({ track, index, onPlay }: Props) {
       >
         <span className="track-index">
           {isCurrent && state.isPlaying ? (
-            <span className="eq" aria-label="Now playing">
+            <span className="eq" aria-label="正在播放">
               <span /><span /><span />
             </span>
           ) : (
@@ -34,7 +34,7 @@ export function TrackRow({ track, index, onPlay }: Props) {
           <span className="track-title">{track.title}</span>
           <span className="track-artist">{track.artist}</span>
         </span>
-        {failed && <span className="track-badge">Unavailable</span>}
+        {failed && <span className="track-badge">无法播放</span>}
         <span className="track-dur">
           {track.durationSec ? formatTime(track.durationSec) : '--:--'}
         </span>

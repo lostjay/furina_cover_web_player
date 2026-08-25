@@ -5,11 +5,9 @@
  *  1. The element is created once and never replaced — only `.src` changes.
  *     Constructing a new element mid-session loses the user-gesture autoplay
  *     grant, so the second track would silently fail to start.
- *  2. `crossOrigin` is never set. Plain media playback performs no CORS check;
- *     setting the attribute would opt into one. The media host currently sends
- *     an invalid `Access-Control-Allow-Origin: https://*.lostjay.xyz` (a wildcard
- *     in the subdomain position matches nothing), so any CORS-gated request
- *     would fail outright.
+ *  2. `crossOrigin` is never set. Plain media playback performs no CORS check
+ *     at all, and nothing here reads the audio's samples, so the attribute
+ *     would opt into a check that buys nothing.
  *
  * `currentTime` is exposed through a subscribe/getSnapshot pair rather than React
  * state: it changes ~4x/second and would otherwise re-render the whole tree.
