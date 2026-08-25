@@ -45,6 +45,36 @@
   --bar-h: 74px;
 
   /*
+   * Album colour, sampled from the current cover by src/art/palette.ts and
+   * published onto :root at runtime. The values here are only the pre-sample
+   * defaults, so every rule below is valid before any artwork has loaded and
+   * the UI is never momentarily colourless.
+   */
+  --art-1: #4a86d8;
+  --art-2: #6f7fd6;
+  --art-3: #3f9ec9;
+  --art-4: #8a7bd0;
+  --art-5: #2f76c4;
+  --art-dominant: #2f7ed0;
+  --art-on-light: #1c5fa8;
+  --art-on-dark: #79b4ee;
+
+  /* The album-derived accent, pre-picked for legibility on this theme's
+     surfaces. Components use this rather than choosing per-theme themselves. */
+  --art-accent: var(--art-on-light);
+  --art-tint: color-mix(in oklab, var(--art-dominant) 12%, transparent);
+  --art-glow: color-mix(in oklab, var(--art-dominant) 38%, transparent);
+  /*
+   * Background for filled controls that carry white text — the play buttons,
+   * the primary action. Kept separate from --art-accent because the two are
+   * solving opposite problems: --art-accent has to contrast with the PAGE, so
+   * dark mode lightens it, but a lightened fill leaves white label text at
+   * about 4.6:1 and worse for a light-hued album. --art-solid stays dark enough
+   * for white text whatever the cover turns out to be.
+   */
+  --art-solid: var(--art-on-light);
+
+  /*
    * CJK fallbacks are essential — the library is largely Chinese (赤伶) and the
    * Apple system faces carry no Han glyphs off macOS.
    */
@@ -83,6 +113,13 @@
     --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.55);
     --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.7);
 
+    --art-accent: var(--art-on-dark);
+    --art-tint: color-mix(in oklab, var(--art-dominant) 20%, transparent);
+    --art-glow: color-mix(in oklab, var(--art-dominant) 52%, transparent);
+    /* Darkened toward the page ground: still clearly the album's colour, but
+       deep enough to hold white text. */
+    --art-solid: color-mix(in oklab, var(--art-on-dark) 76%, #0b1220);
+
     color-scheme: dark;
   }
 }
@@ -113,6 +150,11 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.55);
   --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.7);
+
+  --art-accent: var(--art-on-dark);
+  --art-tint: color-mix(in oklab, var(--art-dominant) 20%, transparent);
+  --art-glow: color-mix(in oklab, var(--art-dominant) 52%, transparent);
+  --art-solid: color-mix(in oklab, var(--art-on-dark) 76%, #0b1220);
 
   color-scheme: dark;
 }

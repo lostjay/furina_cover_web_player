@@ -6,6 +6,7 @@ import {
   PlayIcon, PauseIcon, NextIcon, PrevIcon, ShuffleIcon, RepeatIcon, ChevronDownIcon,
   LyricsIcon,
 } from './icons'
+import { repeatLabel } from '../i18n/labels'
 
 interface Props {
   onClose: () => void
@@ -30,25 +31,29 @@ export function FullScreenPlayer({ onClose, lyricsVisible, onToggleLyrics }: Pro
 
   return (
     <div
-      className={`fullscreen${showLyrics ? ' has-lyrics' : ''}`}
+      className={[
+        'fullscreen',
+        showLyrics ? 'has-lyrics' : '',
+        state.isPlaying ? 'is-playing' : '',
+      ].filter(Boolean).join(' ')}
       role="dialog"
       aria-modal="true"
-      aria-label="Now playing"
+      aria-label="正在播放"
     >
       <Backdrop artwork={art} playing={state.isPlaying} hasLyrics={hasLyrics} />
 
       <div className="fs-head">
-        <button className="icon-btn" onClick={onClose} aria-label="Close full screen player">
+        <button className="icon-btn" onClick={onClose} aria-label="收起全屏播放器">
           <ChevronDownIcon size={20} />
         </button>
-        <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.7 }}>{track.albumTitle}</div>
+        <div className="fs-album-name">{track.albumTitle}</div>
         {hasLyrics ? (
           <button
             className="icon-btn"
             onClick={onToggleLyrics}
             aria-pressed={showLyrics}
-            aria-label={showLyrics ? 'Hide lyrics' : 'Show lyrics'}
-            title={showLyrics ? 'Hide lyrics' : 'Show lyrics'}
+            aria-label={showLyrics ? '隐藏歌词' : '显示歌词'}
+            title={showLyrics ? '隐藏歌词' : '显示歌词'}
           >
             <LyricsIcon size={18} />
           </button>
@@ -67,7 +72,9 @@ export function FullScreenPlayer({ onClose, lyricsVisible, onToggleLyrics }: Pro
         </div>
 
         <div className="fs-left">
-          <img className={`fs-art${state.isPlaying ? '' : ' is-paused'}`} src={art} alt="" />
+          <div className={`fs-art-wrap${state.isPlaying ? '' : ' is-paused'}`}>
+            <img className={`fs-art${state.isPlaying ? '' : ' is-paused'}`} src={art} alt="" />
+          </div>
 
           <div className="fs-meta">
             <h2>{track.title}</h2>
@@ -82,7 +89,7 @@ export function FullScreenPlayer({ onClose, lyricsVisible, onToggleLyrics }: Pro
                 max={total}
                 buffered={buffered}
                 onSeek={(s) => engine.seek(s)}
-                label="Playback position"
+                label="播放进度"
               />
               <span className="scrubber-time right">{total > 0 ? formatTime(total) : '--:--'}</span>
             </div>
@@ -92,28 +99,28 @@ export function FullScreenPlayer({ onClose, lyricsVisible, onToggleLyrics }: Pro
                 className="icon-btn"
                 onClick={() => dispatch({ type: 'toggleShuffle' })}
                 aria-pressed={state.shuffle}
-                aria-label="Shuffle"
+                aria-label="随机播放"
               >
                 <ShuffleIcon size={18} />
               </button>
-              <button className="icon-btn" onClick={() => dispatch({ type: 'prev' })} aria-label="Previous track">
+              <button className="icon-btn" onClick={() => dispatch({ type: 'prev' })} aria-label="上一首">
                 <PrevIcon size={26} />
               </button>
               <button
                 className="fs-play"
                 onClick={() => dispatch({ type: 'toggle' })}
-                aria-label={state.isPlaying ? 'Pause' : 'Play'}
+                aria-label={state.isPlaying ? '暂停' : '播放'}
               >
                 {state.isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
               </button>
-              <button className="icon-btn" onClick={() => dispatch({ type: 'next' })} aria-label="Next track">
+              <button className="icon-btn" onClick={() => dispatch({ type: 'next' })} aria-label="下一首">
                 <NextIcon size={26} />
               </button>
               <button
                 className="icon-btn"
                 onClick={() => dispatch({ type: 'cycleRepeat' })}
                 aria-pressed={state.repeat !== 'off'}
-                aria-label={`Repeat: ${state.repeat}`}
+                aria-label={repeatLabel(state.repeat)}
               >
                 <RepeatIcon size={18} />
               </button>

@@ -1,22 +1,14 @@
 import type { Library, Track } from '../types'
 
 /**
- * Resolve `/public/…` manifest URLs to their real CDN location.
+ * Resolve `/public/…` manifest URLs to their real object-storage location.
  *
- * The media host (see README § CORS) does not hand out a direct link to
- * object storage: a plain GET for a `/public/…` path 302-redirects to a
- * presigned R2 URL. Following that redirect with `fetch()` trips a corner of
- * the fetch spec — once a cross-origin request changes origin *again* on a
- * redirect, the browser resends the follow-up request with `Origin: null`,
- * and R2's CORS policy (which matches real origins, not `null`) then rejects
- * it. That is the "null origin" failure: reads for lyrics and background
- * artwork break even though every CORS header involved is otherwise correct.
- *
- * The host also understands `Accept: application/json` on the same path and
- * answers with `{ "url": "<direct object-storage URL>" }` (HTTP 200) instead
- * of redirecting. Resolving that first and loading the URL it hands back
- * means the browser talks to object storage in a single hop — no second
- * cross-origin jump, so no null origin.
+ * The media host does not serve these paths directly. A plain GET
+ * 302-redirects to a presigned URL; asking for the same path with
+ * `Accept: application/json` instead answers `{ "url": "<direct URL>" }` with
+ * HTTP 200. Resolving up front means every consumer — `<audio>`, the lyric
+ * fetch, artwork `<img>` tags, colour sampling — talks to object storage in a
+ * single hop, with no redirect in the middle.
  *
  * Scoped to `/public/…` paths specifically, so a manifest entry pointing at
  * some other host's direct file URL is left completely alone: no extra
@@ -52,7 +44,7 @@ export function resolveMediaUrl(url: string): Promise<string> {
           : undefined
       return resolved || url
     } catch (err) {
-      console.warn(`[media] could not resolve ${url} via Accept: application/json; using it as-is`, err)
+      console.warn(`[media] could not resolve ${url}; using it as-is`, err)
       return url
     }
   })()
@@ -66,12 +58,7 @@ function resolveOptional(url: string | undefined): Promise<string | undefined> {
   return url ? resolveMediaUrl(url) : Promise.resolve(undefined)
 }
 
-/**
- * Resolve every `/public/…` URL in a parsed library up front, so every
- * downstream consumer — the `<audio>` element, lyric `fetch()`, the
- * background renderer's `fetch().blob()` — ever only sees a direct,
- * already-CORS-correct CDN URL.
- */
+/** Resolve every `/public/…` URL in a parsed library up front. */
 export async function resolveLibraryUrls(library: Library): Promise<Library> {
   const albums = await Promise.all(
     library.albums.map(async (album) => ({

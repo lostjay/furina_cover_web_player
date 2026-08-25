@@ -54,12 +54,20 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 
 .sidebar {
   grid-area: sidebar;
+  position: relative;
   background: var(--sidebar-bg);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-right: 1px solid var(--border);
   padding: 18px 10px;
   overflow-y: auto;
+}
+/* A wash of the current album's colour, strongest at the top behind the brand
+   and fading out down the rail. Painted as a pseudo-element so it sits under
+   the nav items without tinting their text. */
+.sidebar::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(to bottom, var(--art-tint), transparent 46%);
 }
 
 .brand {
@@ -69,13 +77,21 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .brand-mark {
   width: 22px; height: 22px; border-radius: 7px; flex: none;
-  background: linear-gradient(135deg, var(--accent), var(--lilac));
+  background: linear-gradient(135deg, var(--art-1), var(--art-2));
+  box-shadow: 0 2px 10px var(--art-glow);
+  transition: background 600ms ease, box-shadow 600ms ease;
 }
 
+/*
+ * No uppercasing and no extra tracking: both are Latin typographic devices.
+ * `text-transform: uppercase` is a no-op on Han glyphs, and letter-spacing
+ * pushes apart characters that are meant to sit on an even square rhythm, which
+ * reads as broken rather than as emphasis.
+ */
 .nav-heading {
   padding: 14px 10px 6px;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--text-tertiary);
+  font-size: 11.5px; font-weight: 600;
+  color: var(--text-tertiary);
 }
 
 .nav-item {
@@ -87,7 +103,11 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   text-align: left;
 }
 .nav-item:hover { background: var(--hover); color: var(--text); }
-.nav-item[aria-current="true"] { background: var(--active); color: var(--accent); font-weight: 600; }
+.nav-item[aria-current="true"] {
+  background: var(--art-tint);
+  color: var(--art-accent);
+  font-weight: 600;
+}
 .nav-item .glyph { width: 17px; text-align: center; flex: none; opacity: .85; }
 .nav-item .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -121,7 +141,8 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   border-radius: 8px;
   color: var(--text-tertiary);
 }
-.search:focus-within { border-color: var(--accent); background: var(--bg); }
+.search { border-radius: 999px; transition: border-color 160ms ease, background 160ms ease; }
+.search:focus-within { border-color: var(--art-accent); background: var(--bg); }
 .search input {
   flex: 1; min-width: 0; border: 0; background: none; outline: none;
   font-size: 13px; color: var(--text);
@@ -134,7 +155,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   color: var(--text-secondary); flex: none;
 }
 .icon-btn:hover { background: var(--hover); color: var(--text); }
-.icon-btn[aria-pressed="true"] { color: var(--accent); }
+.icon-btn[aria-pressed="true"] { color: var(--art-accent); }
 
 .content { padding: 22px 26px 34px; }
 
@@ -146,39 +167,86 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 
 /* ---------- album header ---------- */
 
-.album-hero { display: flex; gap: 24px; margin-bottom: 26px; align-items: flex-end; }
+/*
+ * The album header. The artwork casts a soft pool of its own colour — the same
+ * `--art-*` palette the full-screen backdrop uses — so the page picks up the
+ * cover rather than sitting on flat white.
+ */
+.album-hero {
+  position: relative;
+  display: flex; gap: 26px; margin-bottom: 30px; align-items: flex-end;
+  padding: 22px 22px 24px;
+  margin-inline: -22px;
+  border-radius: 22px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.album-hero::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(120% 150% at 12% 0%, var(--art-tint), transparent 62%),
+    linear-gradient(to bottom, var(--art-tint), transparent 78%);
+}
+
+.album-hero-art-wrap { position: relative; flex: none; }
+.album-hero-art-wrap::after {
+  content: ''; position: absolute; inset: 14% 10% -12%;
+  z-index: -1;
+  border-radius: 50%;
+  background: var(--art-dominant);
+  filter: blur(34px);
+  opacity: 0.5;
+  transition: background 600ms ease;
+}
 .album-hero-art {
-  width: 190px; height: 190px; flex: none;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  display: block;
+  width: 200px; height: 200px;
+  border-radius: 18px;
+  box-shadow:
+    0 18px 44px rgba(17, 24, 35, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.14) inset;
   object-fit: cover;
   background: var(--bg-sunken);
 }
 .album-hero-meta { padding-bottom: 6px; min-width: 0; }
 .album-hero-meta h2 { margin: 0 0 6px; font-size: 27px; font-weight: 700; letter-spacing: -0.02em; }
-.album-hero-meta .artist { color: var(--accent); font-size: 16px; font-weight: 600; }
+.album-hero-meta .artist {
+  color: var(--art-accent); font-size: 16px; font-weight: 600;
+  transition: color 600ms ease;
+}
 .album-hero-meta .detail { color: var(--text-tertiary); font-size: 12.5px; margin-top: 3px; }
 .album-actions { display: flex; gap: 9px; margin-top: 15px; }
 
 .btn-filled {
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 20px; border-radius: 8px;
-  background: var(--accent); color: var(--accent-contrast);
+  padding: 9px 22px; border-radius: 999px;
+  background: var(--art-solid); color: #fff;
   font-size: 13.5px; font-weight: 600;
+  box-shadow: 0 6px 18px var(--art-glow);
+  transition: transform 160ms cubic-bezier(0.32, 0.72, 0, 1), filter 160ms ease,
+    background 600ms ease, box-shadow 600ms ease;
 }
-.btn-filled:hover { background: var(--accent-hover); }
+.btn-filled:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.btn-filled:active { transform: translateY(0) scale(0.98); }
 
 .btn-tinted {
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 20px; border-radius: 8px;
-  background: var(--accent-soft); color: var(--accent);
+  padding: 9px 22px; border-radius: 999px;
+  background: var(--art-tint); color: var(--art-accent);
   font-size: 13.5px; font-weight: 600;
+  border: 1px solid var(--border);
+  transition: transform 160ms cubic-bezier(0.32, 0.72, 0, 1), background 600ms ease,
+    color 600ms ease;
 }
-.btn-tinted:hover { filter: brightness(0.96); }
+.btn-tinted:hover { background: var(--art-glow); transform: translateY(-1px); }
+.btn-tinted:active { transform: translateY(0) scale(0.98); }
 
 @media (max-width: 620px) {
-  .album-hero { flex-direction: column; align-items: flex-start; gap: 16px; }
-  .album-hero-art { width: 148px; height: 148px; }
+  .album-hero {
+    flex-direction: column; align-items: flex-start; gap: 16px;
+    padding: 18px 16px 20px; margin-inline: -16px; border-radius: 18px;
+  }
+  .album-hero-art { width: 156px; height: 156px; }
   .content { padding: 18px 16px 30px; }
   .topbar { padding: 11px 16px; }
 }
@@ -188,17 +256,31 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .track-list { border-top: 1px solid var(--border); }
 
 .track-row {
+  position: relative;
   display: grid;
-  grid-template-columns: 30px 40px 1fr auto auto;
+  grid-template-columns: 30px 44px 1fr auto auto;
   align-items: center; gap: 13px;
-  width: 100%; padding: 9px 10px;
+  width: 100%; padding: 9px 12px;
   border-bottom: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: 10px;
   text-align: left;
   color: inherit;
+  transition: background 140ms ease;
 }
 .track-row:hover { background: var(--hover); }
-.track-row.is-current .track-title { color: var(--accent); }
+
+/* The playing row is marked three ways — tint, accent title, and a coloured
+   bar in the gutter — so it stays obvious at a glance in a long list. */
+.track-row.is-current {
+  background: var(--art-tint);
+  border-bottom-color: transparent;
+}
+.track-row.is-current::before {
+  content: ''; position: absolute; left: 0; top: 12%; bottom: 12%;
+  width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--art-accent);
+}
+.track-row.is-current .track-title { color: var(--art-accent); font-weight: 600; }
 .track-row.is-failed { opacity: .55; }
 
 .track-index {
@@ -207,7 +289,10 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .track-row:hover .track-index { color: var(--text); }
 
-.track-art { width: 40px; height: 40px; border-radius: 5px; object-fit: cover; flex: none; }
+.track-art {
+  width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex: none;
+  box-shadow: 0 2px 8px rgba(17, 24, 35, 0.16);
+}
 
 .track-main { min-width: 0; }
 .track-title {
@@ -231,7 +316,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 /* Equaliser bars marking the playing row. */
 .eq { display: flex; align-items: flex-end; gap: 2px; height: 13px; justify-content: center; }
 .eq span {
-  width: 2.5px; background: var(--accent); border-radius: 1px;
+  width: 2.5px; background: var(--art-accent); border-radius: 1px;
   animation: eq 900ms ease-in-out infinite;
 }
 .eq span:nth-child(1) { height: 55%; animation-delay: -300ms; }
@@ -267,10 +352,15 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 
 .bar-track { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .bar-art {
-  width: 46px; height: 46px; border-radius: 6px; flex: none;
-  object-fit: cover; box-shadow: var(--shadow-sm); cursor: pointer;
+  width: 48px; height: 48px; border-radius: 9px; flex: none;
+  object-fit: cover; cursor: pointer;
   background: var(--bg-sunken);
+  /* The halo is the album's own colour, so the bar reads as belonging to
+     whatever is playing rather than to the app chrome. */
+  box-shadow: 0 3px 14px var(--art-glow), 0 0 0 1px var(--border);
+  transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow 600ms ease;
 }
+.bar-art:hover { transform: scale(1.05); }
 .bar-meta { min-width: 0; }
 .bar-title {
   font-size: 13px; font-weight: 600;
@@ -286,10 +376,14 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 
 .play-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border-radius: 50%;
-  background: var(--accent); color: var(--accent-contrast);
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--art-solid); color: #fff;
+  box-shadow: 0 3px 12px var(--art-glow);
+  transition: transform 160ms cubic-bezier(0.32, 0.72, 0, 1), filter 160ms ease,
+    background 600ms ease;
 }
-.play-btn:hover { background: var(--accent-hover); }
+.play-btn:hover { filter: brightness(1.1); transform: scale(1.06); }
+.play-btn:active { transform: scale(0.95); }
 
 .bar-right { display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
 
@@ -317,7 +411,11 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   background: var(--track-rail); border-radius: 2px; overflow: hidden;
 }
 .rail-buffered { position: absolute; inset-block: 0; left: 0; background: var(--border-strong); }
-.rail-fill { position: absolute; inset-block: 0; left: 0; background: var(--accent); }
+.rail-fill {
+  position: absolute; inset-block: 0; left: 0;
+  background: var(--art-accent);
+  transition: background 600ms ease;
+}
 .rail-knob {
   position: absolute; width: 11px; height: 11px; border-radius: 50%;
   background: var(--bg-elevated); border: 1px solid var(--border-strong);
@@ -331,72 +429,164 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 
 /* ---------- full-screen now playing ---------- */
 
+/*
+ * The full-screen player is a deliberately dark, immersive surface in BOTH
+ * themes, and it is the one place in the app that ignores the light/dark
+ * setting.
+ *
+ * That is a fix, not a preference. It used to inherit the theme, which meant
+ * light mode laid a 58-76% WHITE wash over the artwork so that dark body text
+ * stayed legible — and that wash is what flattened every cover into a
+ * near-white slab with no album colour left in it. Committing to white text on
+ * a dark ground removes the reason for the wash entirely, so the scrim can drop
+ * to a light vignette and the artwork's colour survives.
+ *
+ * The theme tokens are redefined locally rather than each control being
+ * restyled, so .icon-btn, .rail and .scrubber-time follow along unchanged.
+ */
 .fullscreen {
   position: fixed; inset: 0; z-index: 50;
   display: grid; grid-template-rows: auto 1fr;
-  background: var(--bg);
+  background: #070a10;
   animation: fs-in 320ms cubic-bezier(0.32, 0.72, 0, 1);
   overflow: hidden;
+
+  --text: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.74);
+  --text-tertiary: rgba(255, 255, 255, 0.56);
+  --hover: rgba(255, 255, 255, 0.14);
+  --active: rgba(255, 255, 255, 0.2);
+  --border: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(255, 255, 255, 0.5);
+  --track-rail: rgba(255, 255, 255, 0.26);
+  --bg-elevated: #ffffff;
+  /* White transport controls read cleanly over any album colour, where a tinted
+     accent would fight whatever the cover happens to be. The album-derived
+     accent is overridden for the same reason: the backdrop here IS the album
+     colour, so a progress bar drawn in it would be invisible. */
+  --accent: #ffffff;
+  --accent-hover: rgba(255, 255, 255, 0.86);
+  --accent-contrast: #10151f;
+  --art-accent: #ffffff;
+
+  color: var(--text);
 }
 @keyframes fs-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-/* AMLL's fluid background.
+/*
+ * Layer 1: the aurora. Blobs of album colour drifting behind everything.
+ *
+ * This is the layer that guarantees the screen is coloured at all — it is plain
+ * CSS with no WebGL, no texture upload and no network, so it cannot fail the
+ * way the fluid renderer can.
+ *
+ * The container is inset NEGATIVELY and the blur applied to it as a whole: a
+ * 72px blur on a box clipped to the viewport would feather its own edges into
+ * dark bands down each side. Pushing the box past the edges puts that feathering
+ * off-screen.
+ */
+.fs-aurora {
+  position: absolute; inset: -18%; z-index: 0;
+  pointer-events: none;
+  filter: blur(72px) saturate(160%);
+  opacity: 0.95;
+}
+
+.fs-blob {
+  position: absolute;
+  width: 62%; height: 62%;
+  border-radius: 50%;
+  will-change: transform;
+  /* `closest-side` keeps the falloff circular in a non-square box; the default
+     `farthest-corner` would stretch it into an ellipse. */
+  background: radial-gradient(circle closest-side, var(--blob) 0%, transparent 72%);
+  animation: blob-drift var(--dur) ease-in-out infinite alternate;
+  animation-delay: var(--delay);
+}
+
+.fs-blob-1 { --blob: var(--art-1); top: -6%;  left: -4%;  --dur: 19s; --delay: 0s;    }
+.fs-blob-2 { --blob: var(--art-2); top: 4%;   left: 42%;  --dur: 23s; --delay: -4s;  }
+.fs-blob-3 { --blob: var(--art-3); top: 40%;  left: -8%;  --dur: 27s; --delay: -9s;  }
+.fs-blob-4 { --blob: var(--art-4); top: 36%;  left: 46%;  --dur: 21s; --delay: -14s; }
+.fs-blob-5 { --blob: var(--art-5); top: 18%;  left: 20%;  --dur: 31s; --delay: -6s;  width: 78%; height: 78%; }
+
+@keyframes blob-drift {
+  from { transform: translate3d(-7%, -5%, 0) scale(1); }
+  to   { transform: translate3d(9%, 8%, 0) scale(1.22); }
+}
+
+/* Paused music should look paused. The blobs ease to a stop rather than
+   freezing mid-frame. */
+.fs-aurora:not(.is-playing) .fs-blob { animation-play-state: paused; }
+
+/*
+ * Layer 2: AMLL's fluid background, over the aurora.
  *
  * BackgroundRender sets `display: contents` inline on its own wrapper, so the
  * wrapper has no box and cannot be positioned — its <canvas> becomes a direct
  * child of .fullscreen instead. Left alone the canvas lands in the grid and
  * collapses to a couple of pixels tall, so position the canvas itself. Its
- * inline width/height:100% then resolve against .fullscreen. */
+ * inline width/height:100% then resolve against .fullscreen.
+ *
+ * It is held under full opacity so the aurora reads through it; the two are
+ * sampled from the same cover, so they reinforce rather than muddy each other.
+ */
 .fs-bg-render canvas {
   position: absolute;
   inset: 0;
+  z-index: 0;
   display: block;
+  opacity: 0.78;
 }
 
-.fullscreen::before {
-  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, .58), rgba(255, 255, 255, .76));
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .fullscreen::before {
-    background: linear-gradient(to bottom, rgba(0, 0, 0, .48), rgba(0, 0, 0, .74));
-  }
-}
-:root[data-theme="dark"] .fullscreen::before {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, .48), rgba(0, 0, 0, .74));
+/*
+ * Layer 3: the veil — a vignette plus a scrim. Light on purpose: heavy enough to
+ * hold white text, far short of the flat grey wash it replaces.
+ *
+ * The middle band is deliberately NOT left at its lightest. AMLL draws its
+ * lyrics with `mix-blend-mode: plus-lighter`, an additive blend, so a dimmed
+ * inactive line over a bright backdrop adds toward white and disappears — which
+ * is exactly what happened on a phone, where the lyrics occupy the brightest
+ * part of the screen. Keeping a floor of darkness through the middle is what
+ * makes the unsung lines readable.
+ */
+.fs-veil {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 32%, transparent 0%, rgba(4, 7, 12, 0.5) 100%),
+    linear-gradient(to bottom, rgba(4, 7, 12, 0.38) 0%, rgba(4, 7, 12, 0.18) 34%, rgba(4, 7, 12, 0.58) 100%);
 }
 
-/* Fallback for machines without WebGL — see components/Backdrop.tsx. */
-.fs-backdrop { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
-.fs-backdrop img {
-  position: absolute; inset: -25%;
-  width: 150%; height: 150%; object-fit: cover;
-  filter: blur(70px) saturate(200%);
-  transform: scale(1.15);
-  opacity: .55;
+/* Drifting motes — Fontaine's water, and a little depth between the backdrop
+   and the artwork. Decorative only; removed entirely under reduced motion. */
+.fs-motes { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.fs-mote {
+  position: absolute;
+  bottom: -12%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.12) 60%, transparent 72%);
+  opacity: 0;
+  animation: mote-rise var(--dur) linear infinite;
+  animation-delay: var(--delay);
 }
-.fs-backdrop::after {
-  content: ''; position: absolute; inset: 0;
-  /* Light theme keeps a light ground so the dark text stays legible over any
-     artwork; dark theme does the mirror image. */
-  background: linear-gradient(to bottom, rgba(255,255,255,.62), rgba(255,255,255,.80));
+@keyframes mote-rise {
+  0%   { transform: translate3d(0, 0, 0) scale(0.7); opacity: 0; }
+  12%  { opacity: var(--peak); }
+  80%  { opacity: var(--peak); }
+  100% { transform: translate3d(var(--drift), -118vh, 0) scale(1.15); opacity: 0; }
 }
-/* The system-preference variant MUST stay inside the media query: a bare
-   :root:not([data-theme="light"]) also matches the default (no attribute)
-   state, which would force the dark wash on light-theme viewers. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .fs-backdrop::after {
-    background: linear-gradient(to bottom, rgba(0, 0, 0, .55), rgba(0, 0, 0, .80));
-  }
-}
-:root[data-theme="dark"] .fs-backdrop::after {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, .55), rgba(0, 0, 0, .80));
-}
+.fullscreen:not(.is-playing) .fs-mote { animation-play-state: paused; }
 
 .fs-head {
   position: relative; z-index: 2;
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 22px;
+}
+.fs-album-name {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 60%;
 }
 .fs-body {
   position: relative; z-index: 1;
@@ -405,10 +595,27 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .fs-left { display: flex; flex-direction: column; align-items: center; gap: 22px; min-width: 0; }
 
+/* The artwork sits in its own pool of album colour. `--art-glow` is derived
+   from the cover, so the halo always belongs to the image casting it. */
+.fs-art-wrap { position: relative; flex: none; }
+.fs-art-wrap::after {
+  content: ''; position: absolute; inset: 6%;
+  z-index: -1;
+  border-radius: 50%;
+  background: var(--art-dominant);
+  filter: blur(46px);
+  opacity: 0.55;
+  transition: opacity 380ms ease;
+}
+.fs-art-wrap.is-paused::after { opacity: 0.28; }
+
 .fs-art {
+  display: block;
   width: min(38vh, 340px); height: min(38vh, 340px);
-  border-radius: 12px; object-fit: cover;
-  box-shadow: var(--shadow-lg);
+  border-radius: 14px; object-fit: cover;
+  box-shadow:
+    0 30px 70px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.09) inset;
   transition: transform 380ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 .fs-art.is-paused { transform: scale(0.9); }
@@ -417,16 +624,23 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .fs-meta h2 {
   margin: 0; font-size: 25px; font-weight: 700; letter-spacing: -0.02em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 1px 20px rgba(0, 0, 0, 0.4);
 }
-.fs-meta p { margin: 4px 0 0; color: var(--text-secondary); font-size: 16px; }
+.fs-meta p {
+  margin: 4px 0 0; color: var(--text-secondary); font-size: 16px;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.35);
+}
 .fs-controls { display: flex; flex-direction: column; gap: 14px; width: min(100%, 420px); }
 .fs-transport { display: flex; align-items: center; justify-content: center; gap: 20px; }
 .fs-play {
   display: inline-flex; align-items: center; justify-content: center;
   width: 56px; height: 56px; border-radius: 50%;
   background: var(--accent); color: var(--accent-contrast);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  transition: transform 160ms cubic-bezier(0.32, 0.72, 0, 1), background 160ms ease;
 }
-.fs-play:hover { background: var(--accent-hover); }
+.fs-play:hover { background: var(--accent-hover); transform: scale(1.06); }
+.fs-play:active { transform: scale(0.96); }
 
 /*
  * The compact art + title row. It only exists on narrow screens showing lyrics,
@@ -460,7 +674,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
     min-height: 0;
   }
   .fullscreen.has-lyrics .fs-compact { display: flex; }
-  .fullscreen.has-lyrics .fs-art,
+  .fullscreen.has-lyrics .fs-art-wrap,
   .fullscreen.has-lyrics .fs-meta { display: none; }
   .fullscreen.has-lyrics .fs-left {
     display: contents; /* let .fs-controls become a grid row of its own */
@@ -490,7 +704,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .fs-compact-art {
   width: 52px; height: 52px; flex: none;
   border-radius: 8px; object-fit: cover;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
 }
 .fs-compact-meta { min-width: 0; }
 .fs-compact-title {
@@ -508,8 +722,10 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
  * The lyric view is AMLL's <LyricPlayer>. It positions and animates its own
  * lines, so all this does is give it a box to live in and a colour to inherit.
  *
- * AMLL is built for a dark backdrop and assumes white text, so the light theme
- * needs an explicit override — otherwise the lyrics are white on near-white.
+ * AMLL is built for exactly this situation — white text over a dark, colourful
+ * backdrop — and `mix-blend-mode: plus-lighter` is what produces its glow. The
+ * light-theme override that used to sit here is gone along with the reason for
+ * it: the full-screen player is now dark in both themes.
  */
 .fs-lyrics {
   height: 100%;
@@ -518,32 +734,12 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   cursor: pointer;
 }
 
-/*
- * AMLL styles itself through these custom properties, and defaults to white
- * text with `mix-blend-mode: plus-lighter`. That additive blend is what gives
- * the glow on a dark backdrop — but on our light Fontaine theme it adds toward
- * white and renders inactive lines effectively invisible. So: normal blending
- * and dark text in light mode, and AMLL's intended treatment in dark mode.
- */
 .fs-lyrics .amll-lyric-player {
-  --amll-lp-color: var(--text);
-  --amll-lp-font-size: clamp(20px, 2.6vw, 30px);
-  --amll-lp-hover-bg-color: rgba(17, 24, 35, 0.06);
-  mix-blend-mode: normal;
-  font-weight: 650;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .fs-lyrics .amll-lyric-player {
-    --amll-lp-color: #fff;
-    --amll-lp-hover-bg-color: rgba(255, 255, 255, 0.08);
-    mix-blend-mode: plus-lighter;
-  }
-}
-:root[data-theme="dark"] .fs-lyrics .amll-lyric-player {
   --amll-lp-color: #fff;
+  --amll-lp-font-size: clamp(20px, 2.6vw, 30px);
   --amll-lp-hover-bg-color: rgba(255, 255, 255, 0.08);
   mix-blend-mode: plus-lighter;
+  font-weight: 650;
 }
 
 .lyrics-empty {
@@ -558,10 +754,16 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   position: fixed; top: 0; right: 0; bottom: var(--bar-h); z-index: 40;
   width: min(340px, 88vw);
   display: flex; flex-direction: column;
-  background: var(--bg-elevated);
+  background: var(--chrome-bg);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
   border-left: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
   animation: q-in 240ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.queue-panel::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(to bottom, var(--art-tint), transparent 40%);
 }
 @keyframes q-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
@@ -579,23 +781,38 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   cursor: grab; width: 100%; text-align: left;
 }
 .queue-item:hover { background: var(--hover); }
-.queue-item.is-current { background: var(--accent-soft); }
-.queue-item.is-current .queue-title { color: var(--accent); font-weight: 600; }
+.queue-item.is-current { background: var(--art-tint); }
+.queue-item.is-current .queue-title { color: var(--art-accent); font-weight: 600; }
 .queue-item.is-dragging { opacity: .4; }
-.queue-item.is-drop-target { box-shadow: inset 0 2px 0 var(--accent); }
-.queue-art { width: 34px; height: 34px; border-radius: 4px; object-fit: cover; }
+.queue-item.is-drop-target { box-shadow: inset 0 2px 0 var(--art-accent); }
+.queue-art { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; }
 .queue-title { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .queue-artist { display: block; font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- dialog ---------- */
 
-.scrim { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.35); }
+.scrim {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(0, 0, 0, .35);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: fade-in 180ms ease;
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
 .dialog {
   position: fixed; z-index: 61; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  width: min(360px, 90vw); padding: 20px;
-  background: var(--bg-elevated); border-radius: var(--radius-lg);
+  width: min(360px, 90vw); padding: 22px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 18px;
   box-shadow: var(--shadow-lg);
+  animation: dialog-in 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 .dialog h2 { margin: 0 0 13px; font-size: 16px; }
 .dialog input {
@@ -603,12 +820,16 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   background: var(--bg-sunken); border: 1px solid var(--border);
   border-radius: 8px; outline: none;
 }
-.dialog input:focus { border-color: var(--accent); }
+.dialog input:focus { border-color: var(--art-accent); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; }
 .dialog-actions button { padding: 7px 15px; border-radius: 7px; font-size: 13px; font-weight: 600; }
 .dialog-actions .cancel { color: var(--text-secondary); }
 .dialog-actions .cancel:hover { background: var(--hover); }
-.dialog-actions .confirm { background: var(--accent); color: var(--accent-contrast); }
+.dialog-actions .confirm {
+  background: var(--art-solid); color: #fff;
+  border-radius: 999px; padding-inline: 18px;
+}
+.dialog-actions .confirm:disabled { opacity: .45; cursor: not-allowed; }
 
 /* ---------- reduced motion ---------- */
 
@@ -619,6 +840,13 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
     transition-duration: 0.001ms !important;
   }
   .fs-art.is-paused { transform: none; }
+
+  /* The blanket rule above would snap the blobs to their end keyframe, bunching
+     them into one corner. Hold them at their laid-out positions instead — the
+     backdrop keeps its colour and simply stops moving. */
+  .fs-blob { animation: none !important; transform: none !important; }
+  /* Purely decorative, and motion is the entire point of them. */
+  .fs-motes { display: none; }
 }
 
 /* AGPL-3.0 s13 source offer — deliberately quiet, but always reachable. */
