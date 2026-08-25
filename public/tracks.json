@@ -14,6 +14,26 @@
           "durationSec": 88,
           "audioUrl": "https://lostjay.xyz/public/music/cover/%E8%B5%A4%E4%BC%B6.mp3",
           "lrcUrl": "https://lostjay.xyz/public/music/cover/%E8%B5%A4%E4%BC%B6.lrc"
+        },
+        {
+          "id": "shijie-shang-de-ling-yi-ge-wo",
+          "title": "世界上的另一个我",
+          "durationSec": 95,
+          "audioUrl": "https://lostjay.xyz/public/music/cover/%E4%B8%96%E7%95%8C%E4%B8%8A%E7%9A%84%E5%8F%A6%E4%B8%80%E4%B8%AA%E6%88%91.mp3",
+          "lrcUrl": "https://lostjay.xyz/public/music/cover/%E4%B8%96%E7%95%8C%E4%B8%8A%E7%9A%84%E5%8F%A6%E4%B8%80%E4%B8%AA%E6%88%91.lrc"
+        },
+        {
+          "id": "jingwei",
+          "title": "精卫",
+          "durationSec": 24,
+          "audioUrl": "https://lostjay.xyz/public/music/cover/%E7%B2%BE%E5%8D%AB.mp3",
+          "lrcUrl": "https://lostjay.xyz/public/music/cover/%E7%B2%BE%E5%8D%AB.lrc"
+        },
+        {
+          "id": "yuai",
+          "title": "雨爱",
+          "durationSec": 71,
+          "audioUrl": "https://lostjay.xyz/public/music/cover/%E9%9B%A8%E7%88%B1.m4a"
         }
       ]
     }
